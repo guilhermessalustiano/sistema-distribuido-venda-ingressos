@@ -8,9 +8,9 @@ const cancelar = (sessaoId, reservaId) =>
 beforeEach(() => prepararBanco({ capacidade: 8, preco: 13.50, tempo_reserva_segundos: 30, limite_por_reserva: 3 }));
 
 test('Reinício devolve o Estoque disponível à Capacidade, preserva o Evento e invalida Sessões anteriores', async () => {
-  const compradora = await novaSessao('Ana');
-  const convertida = await reservarOk(compradora, 2);
-  assert.equal((await confirmar(compradora, convertida.id)).ok, true);
+  const sessaoVenda = await novaSessao('Ana');
+  const convertida = await reservarOk(sessaoVenda, 2);
+  assert.equal((await confirmar(sessaoVenda, convertida.id)).ok, true);
   const checkout = await novaSessao('Bia');
   const ativa = await reservarOk(checkout, 3);
   const semReserva = await novaSessao('Caio');
@@ -26,7 +26,7 @@ test('Reinício devolve o Estoque disponível à Capacidade, preserva o Evento e
   assert.deepEqual(vitrineDepois.evento, vitrineAntes.evento);
   assert.equal(vitrineDepois.estoque_disponivel, 8);
   const recusa = { ok: false, motivo: 'sessao_invalida' };
-  for (const sessao of [compradora, checkout, semReserva]) {
+  for (const sessao of [sessaoVenda, checkout, semReserva]) {
     assert.deepEqual(await rpc('consultar_evento', { p_sessao_id: sessao }), recusa);
   }
   assert.deepEqual(await reservar(checkout, 1), recusa);
@@ -34,7 +34,7 @@ test('Reinício devolve o Estoque disponível à Capacidade, preserva o Evento e
   assert.deepEqual(await cancelar(checkout, ativa.id), recusa);
 
   const sessaoNova = await novaSessao('Ana');
-  assert.notEqual(sessaoNova, compradora);
+  assert.notEqual(sessaoNova, sessaoVenda);
   assert.equal((await reservar(sessaoNova, 3)).ok, true);
 });
 

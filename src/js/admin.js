@@ -144,8 +144,13 @@ botaoReiniciar.addEventListener('click', () => {
       avisar('Recusa', 'Não foi possível reiniciar a demonstração.');
       return;
     }
-    await carregarPainel();
+    acompanhamento.hidden = true;
     mostrarStatus('Demonstração reiniciada.');
+    try {
+      await carregarPainel();
+    } catch (falha) {
+      avisar('Falha', `Não foi possível atualizar o painel. Use “Atualizar painel” para tentar novamente. ${falha.message}`);
+    }
   }, 'Reiniciando demonstração…');
 });
 

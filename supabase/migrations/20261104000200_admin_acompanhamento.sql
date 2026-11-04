@@ -21,12 +21,12 @@ begin
   -- O relógio é lido uma vez depois de o snapshot ser estabelecido.
   select * into strict v_evento from public.evento where id = 1;
 
-  select coalesce(sum(v.quantidade), 0), count(*), coalesce(sum(v.total), 0),
+  select coalesce(sum(v.quantidade), 0), count(*), coalesce(sum(v.total), 0.00),
          coalesce(jsonb_agg(jsonb_build_object(
            'nome_sessao', s.nome,
            'quantidade', v.quantidade,
            'preco_unitario', v.preco_unitario,
-           'total', v.total,
+           'total', v.total::text,
            'criada_em', v.criada_em
          ) order by v.criada_em desc, v.id), '[]'::jsonb)
     into v_vendidos, v_quantidade_vendas, v_total_arrecadado, v_vendas
@@ -50,9 +50,9 @@ begin
     'agora', v_agora,
     'vendidos', v_vendidos,
     'reservados', v_reservados,
-    'estoque_disponivel', v_evento.capacidade - v_vendidos - v_reservados,
+    'estoque_disponivel', interno.estoque_disponivel(v_agora),
     'quantidade_vendas', v_quantidade_vendas,
-    'total_arrecadado', v_total_arrecadado,
+    'total_arrecadado', v_total_arrecadado::text,
     'reservas_ativas', v_reservas_ativas,
     'vendas', v_vendas
   );

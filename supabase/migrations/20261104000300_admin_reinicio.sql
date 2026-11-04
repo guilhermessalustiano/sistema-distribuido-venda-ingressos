@@ -19,9 +19,10 @@ $$;
 revoke all on function public.admin_reiniciar() from public;
 grant execute on function public.admin_reiniciar() to anon;
 
--- reservar, confirmar_pagamento e cancelar_reserva validam a Sessão pela
--- mesma guarda. Obtém a trava antes de consultar: um Reinício na frente na
--- fila pode ter apagado a Sessão. A vitrine continua usando uma leitura só.
+-- Guarda de Sessão das RPCs de escrita: reservar, confirmar_pagamento e
+-- cancelar_reserva. Para IDs não nulos, adquire a trava do Evento antes de
+-- consultar a Sessão e a mantém até o fim da transação. Um Reinício que
+-- adquiriu a trava primeiro pode ter apagado a Sessão durante a espera.
 create or replace function interno.sessao_existe(p_sessao_id uuid)
 returns boolean
 language plpgsql

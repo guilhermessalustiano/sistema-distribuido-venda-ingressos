@@ -15,7 +15,7 @@ test('Painel admin soma Ingressos e Vendas no mesmo retrato do Evento', async ()
   assert.equal(painel.reservados, 3);
   assert.equal(painel.estoque_disponivel, 5);
   assert.equal(painel.quantidade_vendas, 1);
-  assert.equal(painel.total_arrecadado, 100);
+  assert.equal(painel.total_arrecadado, '100.00');
   assert.equal(painel.estoque_disponivel, (await rpc('consultar_evento')).estoque_disponivel);
 });
 
@@ -66,12 +66,30 @@ test('Painel admin mostra o Preço congelado e o horário da Venda após altera�
 
   const painel = await rpc('admin_consultar');
   assert.equal(painel.evento.preco, 29.9);
-  assert.equal(painel.total_arrecadado, 150);
+  assert.equal(painel.total_arrecadado, '150.00');
   assert.deepEqual(painel.vendas, [{
     nome_sessao: 'Pessoa com Venda',
     quantidade: 3,
     preco_unitario: 50,
-    total: 150,
+    total: '150.00',
     criada_em: venda.criada_em,
   }]);
+});
+
+test('Painel admin preserva os centavos de uma Venda com Preço e Capacidade máximos', async () => {
+  const quantidade = 2_147_483_647;
+  const alteracao = await rpc('admin_atualizar_evento', {
+    p_capacidade: quantidade,
+    p_preco: 99_999_999.99,
+    p_tempo_reserva_segundos: 120,
+    p_limite_por_reserva: quantidade,
+  });
+  assert.equal(alteracao.ok, true);
+  const sessao = await novaSessao('Pessoa com Venda');
+  const reserva = await reservarOk(sessao, quantidade);
+  assert.equal((await confirmar(sessao, reserva.id)).ok, true);
+
+  const painel = await rpc('admin_consultar');
+  assert.equal(painel.total_arrecadado, '214748364678525163.53');
+  assert.equal(painel.vendas[0].total, '214748364678525163.53');
 });

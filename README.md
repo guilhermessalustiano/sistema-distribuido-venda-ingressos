@@ -18,12 +18,14 @@ Duas camadas, sem API intermediária ([ADR 0001](docs/adr/0001-front-fala-direto
 
 ```
 src/                    front estático (é o que a Vercel publica)
-  index.html            telas (section.tela); novas telas entram aqui
+  index.html            telas do Fluxo de venda
+  admin.html            Painel admin da demonstração
   css/estilo.css
   js/config.js          URL e chave anon (local e remoto)
   js/api.js             única porta para o banco: um método por função RPC; Recusa x Falha
   js/sessao.js          id da Sessão no sessionStorage
   js/app.js             fluxo de telas (nome → seleção → Checkout → Venda) e mensagens de Recusa
+  js/admin.js           configuração, acompanhamento e Reinício da demonstração
   js/contagem.js        contagem regressiva do Checkout, corrigida pelo relógio do banco
 supabase/
   config.toml           configuração do Supabase local
@@ -33,6 +35,12 @@ tests/                  suíte de testes das funções RPC (Node + supabase-js)
   apoio/                clientes anon/serviço e preparação do banco
 scripts/servir-front.js servidor estático para testar o front localmente
 ```
+
+## Painel admin
+
+Abra `/admin.html` no mesmo endereço da página de venda. Use **Atualizar painel** para ver as Reservas e Vendas feitas em outras máquinas. O **Reinício da demonstração** pede confirmação e apaga Vendas, Reservas e Sessões, preservando a configuração do Evento.
+
+O painel e suas funções RPC são públicos por decisão de escopo da demonstração. Qualquer pessoa com acesso ao projeto pode consultar os nomes das Sessões, alterar a configuração ou reiniciar a demonstração.
 
 ## Banco de dados
 
@@ -47,6 +55,11 @@ Todas devolvem JSON: `{ ok: true, ... }` em caso de sucesso ou uma **Recusa** `{
 | `reservar` | `p_sessao_id`, `p_quantidade` (número JSON inteiro) | `reserva` (`id`, `quantidade`, `preco_unitario`, `total`, `expira_em`), `agora` (relógio do banco) e `estoque_disponivel` | `sessao_invalida`, `quantidade_invalida` (zero, negativa, fracionária, texto, booleano ou nula), `limite_excedido`, `estoque_insuficiente` (com `estoque_disponivel`) |
 | `cancelar_reserva` | `p_sessao_id`, `p_reserva_id` | `estoque_disponivel` (já com os Ingressos devolvidos) | `sessao_invalida`, `reserva_inexistente` (não existe ou é de outra Sessão), `reserva_ja_finalizada` (convertida em Venda) |
 | `confirmar_pagamento` | `p_sessao_id`, `p_reserva_id` | `venda` (`id`, `quantidade`, `preco_unitario`, `total`, `criada_em`) e `estoque_disponivel` | `sessao_invalida`, `reserva_inexistente` (não existe ou é de outra Sessão), `reserva_ja_finalizada` (cancelada ou já confirmada), `reserva_expirada` |
+| `admin_consultar` | — | `evento`, `agora`, `vendidos`, `reservados`, `estoque_disponivel`, `quantidade_vendas`, `total_arrecadado`, `reservas_ativas` e `vendas` | — |
+| `admin_atualizar_evento` | `p_capacidade`, `p_preco`, `p_tempo_reserva_segundos`, `p_limite_por_reserva` (números JSON) | `evento` | `valor_invalido` (com `campo`), `capacidade_abaixo_do_comprometido` (com `minimo_capacidade`) |
+| `admin_reiniciar` | — | `ok` | — |
+
+Em `admin_consultar`, `total_arrecadado` e `vendas[].total` são textos decimais com duas casas para preservar os centavos, mesmo em valores grandes.
 
 `iniciar_sessao` recusa nomes inválidos com `nome_invalido`: vazio, só espaços, tabs ou quebras de linha, nulo ou com mais de 80 caracteres (o nome é guardado sem os espaços das pontas). Essa Recusa não está no contrato da spec #3 e é mantida para não criar Sessões sem nome.
 
@@ -58,7 +71,7 @@ Todas devolvem JSON: `{ ok: true, ... }` em caso de sucesso ou uma **Recusa** `{
 
 `confirmar_pagamento` trava o Evento e a Reserva, então confirmações simultâneas da mesma Reserva geram uma única Venda (as demais recebem `reserva_ja_finalizada`). O prazo é conferido com o relógio do banco no momento da confirmação (`clock_timestamp()`, depois das travas), e a Venda guarda o Preço unitário e o total da Reserva.
 
-O Estoque disponível é sempre calculado (Capacidade − vendidos − Reservas ativas não expiradas), na função interna `interno.estoque_disponivel(p_agora)`, que nunca devolve valor negativo. A guarda de Sessão das funções que exigem uma fica em `interno.sessao_existe(p_sessao_id)`.
+O Estoque disponível é sempre calculado (Capacidade − vendidos − Reservas ativas não expiradas), na função interna `interno.estoque_disponivel(p_agora)`, que nunca devolve valor negativo. `reservar`, `confirmar_pagamento` e `cancelar_reserva` usam `interno.sessao_existe(p_sessao_id)`, que adquire a trava do Evento antes de consultar a Sessão e a mantém até o fim da transação. O Reinício adquire essa mesma trava antes de apagar as Sessões.
 
 ### Convenções para novas migrações
 
@@ -117,9 +130,9 @@ Em `src/js/config.js`, preencha o objeto `REMOTO` com a Project URL e a chave an
 
 1. Em https://vercel.com, **Add New → Project** e importe este repositório do GitHub.
 2. **Root Directory:** `src`. **Framework Preset:** Other. Sem comando de build nem de instalação.
-3. Faça o deploy. Cada push na branch principal publica de novo.
+3. Aplique as migrações do Supabase antes de publicar o front, para disponibilizar as RPCs do Painel admin. Cada push na branch principal publica de novo.
 
-Verificação manual na página publicada: informar o nome abre a vitrine com o Evento e o Estoque disponível; recarregar mantém a Sessão; uma aba nova pede o nome de novo (atenção: "Duplicar aba" copia o `sessionStorage` e portanto a Sessão).
+Verificação manual na página publicada: informar o nome abre a vitrine com o Evento e o Estoque disponível; recarregar mantém a Sessão; uma aba nova pede o nome de novo (atenção: "Duplicar aba" copia o `sessionStorage` e portanto a Sessão). Em `/admin.html`, confirme que a configuração e os indicadores carregam.
 
 ## Padronização de Commits
 
