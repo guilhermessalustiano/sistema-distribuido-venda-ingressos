@@ -48,13 +48,17 @@ Todas devolvem JSON: `{ ok: true, ... }` em caso de sucesso ou uma **Recusa** `{
 | `cancelar_reserva` | `p_sessao_id`, `p_reserva_id` | `estoque_disponivel` (já com os Ingressos devolvidos) | `sessao_invalida`, `reserva_inexistente` (não existe ou é de outra Sessão), `reserva_ja_finalizada` (convertida em Venda) |
 | `confirmar_pagamento` | `p_sessao_id`, `p_reserva_id` | `venda` (`id`, `quantidade`, `preco_unitario`, `total`, `criada_em`) e `estoque_disponivel` | `sessao_invalida`, `reserva_inexistente` (não existe ou é de outra Sessão), `reserva_ja_finalizada` (cancelada ou já confirmada), `reserva_expirada` |
 
-`reservar` substitui a Reserva ativa anterior da Sessão (os Ingressos dela contam como livres para a nova). Qualquer Recusa deixa tudo como estava, inclusive a Reserva anterior. Reservas expiradas não são apagadas: só deixam de contar no Estoque disponível, sem processo agendado.
+`iniciar_sessao` recusa nomes inválidos com `nome_invalido`: vazio, só espaços, tabs ou quebras de linha, nulo ou com mais de 80 caracteres (o nome é guardado sem os espaços das pontas). Essa Recusa não está no contrato da spec #3 e é mantida para não criar Sessões sem nome.
+
+`reservar` substitui a Reserva ativa anterior da Sessão, na ordem da spec #3: cancela a anterior, valida a quantidade e o Limite por reserva, calcula o Estoque disponível e cria a nova, tudo numa transação. Por isso, com a Sessão válida, **qualquer Recusa (`quantidade_invalida`, `limite_excedido`, `estoque_insuficiente`) também deixa a Sessão sem a Reserva anterior**, e o `estoque_disponivel` de `estoque_insuficiente` já conta os Ingressos dela como livres. Só `sessao_invalida` não mexe em nada. A trava do Evento é obtida antes do cancelamento, na mesma ordem de `confirmar_pagamento` (Evento → Reserva), para não haver deadlock entre as duas. Reservas expiradas não são apagadas: só deixam de contar no Estoque disponível, sem processo agendado.
+
+`reservar` e `confirmar_pagamento` usam o relógio do banco lido depois da trava do Evento (`clock_timestamp()`), e não o início da transação: quem esperou na fila recebe o Tempo de reserva inteiro e não conta como ativas Reservas que expiraram durante a espera.
 
 `cancelar_reserva` é idempotente: cancelar de novo uma Reserva da própria Sessão já cancelada (ou substituída) devolve sucesso sem alterar nada.
 
 `confirmar_pagamento` trava o Evento e a Reserva, então confirmações simultâneas da mesma Reserva geram uma única Venda (as demais recebem `reserva_ja_finalizada`). O prazo é conferido com o relógio do banco no momento da confirmação (`clock_timestamp()`, depois das travas), e a Venda guarda o Preço unitário e o total da Reserva.
 
-O Estoque disponível é sempre calculado (Capacidade − vendidos − Reservas ativas não expiradas), na função interna `interno.estoque_disponivel()`.
+O Estoque disponível é sempre calculado (Capacidade − vendidos − Reservas ativas não expiradas), na função interna `interno.estoque_disponivel(p_agora)`, que nunca devolve valor negativo. A guarda de Sessão das funções que exigem uma fica em `interno.sessao_existe(p_sessao_id)`.
 
 ### Convenções para novas migrações
 
@@ -66,7 +70,7 @@ O Estoque disponível é sempre calculado (Capacidade − vendidos − Reservas 
   ```
 - Auxiliares que o navegador não deve chamar ficam no schema `interno` (não exposto pela API).
 - Tabelas novas: habilite RLS, não crie políticas e não dê privilégios a `anon`/`authenticated` (os privilégios padrão já vêm revogados pela migração `privilegios_padrao`). Acrescente a tabela em `TABELAS` de `tests/acesso-anon.test.js`.
-- Operações que criam ou consomem estoque travam a linha do Evento (`select ... from public.evento where id = 1 for update`) antes de calcular o Estoque disponível.
+- Operações que bloqueiam ou vendem Ingressos travam a linha do Evento (`select ... from public.evento where id = 1 for update`) antes de calcular o Estoque disponível, e calculam com `clock_timestamp()` lido depois da trava.
 
 ## Rodando localmente
 
