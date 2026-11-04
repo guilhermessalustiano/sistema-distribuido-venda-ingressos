@@ -5,6 +5,7 @@ const status = document.getElementById('status');
 const form = document.getElementById('form-configuracao');
 const campos = document.getElementById('campos-configuracao');
 const botaoAtualizar = document.getElementById('botao-atualizar');
+const botaoReiniciar = document.getElementById('botao-reiniciar');
 const entradas = Array.from(form.querySelectorAll('input'));
 
 function avisar(tipo, mensagem) {
@@ -33,6 +34,7 @@ async function executar(acao, mensagem) {
   mostrarStatus(mensagem);
   campos.disabled = true;
   botaoAtualizar.disabled = true;
+  botaoReiniciar.disabled = true;
   try {
     await acao();
   } catch (falha) {
@@ -41,6 +43,7 @@ async function executar(acao, mensagem) {
   } finally {
     campos.disabled = false;
     botaoAtualizar.disabled = false;
+    botaoReiniciar.disabled = false;
   }
 }
 
@@ -84,4 +87,20 @@ form.addEventListener('submit', (evento) => {
 });
 
 botaoAtualizar.addEventListener('click', atualizarPainel);
+
+botaoReiniciar.addEventListener('click', () => {
+  if (!window.confirm('Apagar todas as Vendas, Reservas e Sessões e reiniciar a demonstração?')) return;
+
+  executar(async () => {
+    const resposta = await api.adminReiniciar();
+    if (!resposta.ok) {
+      mostrarStatus('');
+      avisar('Recusa', 'Não foi possível reiniciar a demonstração.');
+      return;
+    }
+    await carregarPainel();
+    mostrarStatus('Demonstração reiniciada.');
+  }, 'Reiniciando demonstração…');
+});
+
 atualizarPainel();
