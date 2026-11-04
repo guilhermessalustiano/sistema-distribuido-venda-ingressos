@@ -88,3 +88,25 @@ button:disabled { opacity: 0.6; cursor: wait; }
 
 .estoque { border-top: 1px solid var(--borda); padding-top: 12px; margin-top: 12px; }
 .esgotado { color: var(--esgotado); font-weight: 700; font-size: 1.25rem; }
+
+.selecao { border-top: 1px solid var(--borda); padding-top: 12px; margin-top: 12px; }
+input[type="number"] {
+    width: 6em;
+    padding: 8px 10px;
+    border: 1px solid var(--borda);
+    border-radius: 6px;
+    font: inherit;
+}
+.total { margin: 0; flex: 1 1 auto; }
+.reserva-pendente {
+    background: var(--fundo);
+    border: 1px dashed var(--primaria);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+.reserva-pendente p { margin-top: 0; }
+
+.contagem { font-size: 1.25rem; }
+.contagem strong { font-variant-numeric: tabular-nums; }
+.acoes { display: flex; flex-wrap: wrap; gap: 8px; }

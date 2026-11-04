@@ -56,7 +56,12 @@ async function chamar(funcao, args) {
   return data;
 }
 
+// Um método por função RPC (um por linha). confirmar_pagamento (#7) e cancelar_reserva (#8)
+// já estão declarados conforme o contrato da spec #3; as funções no banco chegam nesses tickets.
 export const api = {
   iniciarSessao: (nome) => chamar('iniciar_sessao', { p_nome: nome }),
   consultarEvento: (sessaoId) => chamar('consultar_evento', sessaoId ? { p_sessao_id: sessaoId } : {}),
+  reservar: (sessaoId, quantidade) => chamar('reservar', { p_sessao_id: sessaoId, p_quantidade: quantidade }),
+  confirmarPagamento: (sessaoId, reservaId) => chamar('confirmar_pagamento', { p_sessao_id: sessaoId, p_reserva_id: reservaId }),
+  cancelarReserva: (sessaoId, reservaId) => chamar('cancelar_reserva', { p_sessao_id: sessaoId, p_reserva_id: reservaId }),
 };

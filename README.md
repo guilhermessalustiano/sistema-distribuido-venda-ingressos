@@ -23,7 +23,8 @@ src/                    front estático (é o que a Vercel publica)
   js/config.js          URL e chave anon (local e remoto)
   js/api.js             única porta para o banco: um método por função RPC; Recusa x Falha
   js/sessao.js          id da Sessão no sessionStorage
-  js/app.js             fluxo de telas e mensagens de Recusa
+  js/app.js             fluxo de telas (nome → seleção → Checkout → Venda) e mensagens de Recusa
+  js/contagem.js        contagem regressiva do Checkout, corrigida pelo relógio do banco
 supabase/
   config.toml           configuração do Supabase local
   migrations/           migrações versionadas (uma nova por mudança; nunca edite uma já aplicada)
@@ -42,7 +43,10 @@ Todas devolvem JSON: `{ ok: true, ... }` em caso de sucesso ou uma **Recusa** `{
 | Função | Parâmetros | Sucesso | Recusas |
 | --- | --- | --- | --- |
 | `iniciar_sessao` | `p_nome` | `sessao_id` | `nome_invalido` (vazio, só espaços ou mais de 80 caracteres) |
-| `consultar_evento` | `p_sessao_id` (opcional) | `evento` (`nome`, `descricao`, `local`, `data`, `preco`, `limite_por_reserva`), `estoque_disponivel`, `esgotado`, `agora` (relógio do banco), `sessao` (`id`, `nome`) e `reserva` (Reserva ativa da Sessão ou `null`) | `sessao_invalida` |
+| `consultar_evento` | `p_sessao_id` (opcional) | `evento` (`nome`, `descricao`, `local`, `data`, `preco`, `limite_por_reserva`), `estoque_disponivel`, `esgotado`, `agora` (relógio do banco), `sessao` (`id`, `nome`) e `reserva` (Reserva ativa não expirada da Sessão, no mesmo formato de `reservar`, ou `null`) | `sessao_invalida` |
+| `reservar` | `p_sessao_id`, `p_quantidade` (número JSON inteiro) | `reserva` (`id`, `quantidade`, `preco_unitario`, `total`, `expira_em`), `agora` (relógio do banco) e `estoque_disponivel` | `sessao_invalida`, `quantidade_invalida` (zero, negativa, fracionária, texto, booleano ou nula), `limite_excedido`, `estoque_insuficiente` (com `estoque_disponivel`) |
+
+`reservar` substitui a Reserva ativa anterior da Sessão (os Ingressos dela contam como livres para a nova). Qualquer Recusa deixa tudo como estava, inclusive a Reserva anterior. Reservas expiradas não são apagadas: só deixam de contar no Estoque disponível, sem processo agendado.
 
 O Estoque disponível é sempre calculado (Capacidade − vendidos − Reservas ativas não expiradas), na função interna `interno.estoque_disponivel()`.
 

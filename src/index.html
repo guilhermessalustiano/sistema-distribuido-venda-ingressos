@@ -50,11 +50,48 @@
                 <button type="button" id="botao-atualizar" class="secundario">Atualizar estoque</button>
             </div>
 
-            <!-- #6: seleção de quantidade e reserva entram aqui -->
-            <div id="selecao"></div>
+            <!-- Seleção de quantidade e Reserva -->
+            <div id="selecao" class="selecao">
+                <!-- Aparece quando a Sessão já tem uma Reserva ativa (voltou do Checkout) -->
+                <div id="reserva-pendente" class="reserva-pendente" hidden>
+                    <p>Você tem uma Reserva ativa de <strong id="pendente-quantidade"></strong> Ingresso(s),
+                        expira em <strong id="pendente-contagem"></strong>.
+                        Reservar de novo substitui a Reserva atual.</p>
+                    <button type="button" id="botao-voltar-checkout" class="secundario">Voltar ao Checkout</button>
+                </div>
+
+                <form id="form-reserva" novalidate>
+                    <label for="campo-quantidade">Quantidade (1 a <span id="limite-por-reserva"></span>)</label>
+                    <input id="campo-quantidade" name="quantidade" type="number" min="1" step="1" value="1" inputmode="numeric" required>
+                    <p class="total">Total: <strong id="selecao-total"></strong></p>
+                    <button type="submit" id="botao-reservar">Reservar</button>
+                </form>
+            </div>
         </section>
 
-        <!-- #6: telas de Checkout e confirmação da Venda entram aqui, no mesmo padrão (section.tela) -->
+        <!-- Tela 3: Checkout (Reserva ativa) -->
+        <section id="tela-checkout" class="tela" hidden>
+            <h2>Checkout</h2>
+            <dl class="detalhes">
+                <dt>Quantidade</dt><dd id="checkout-quantidade"></dd>
+                <dt>Preço unitário</dt><dd id="checkout-preco"></dd>
+                <dt>Total</dt><dd id="checkout-total"></dd>
+            </dl>
+            <p class="contagem">Sua Reserva expira em <strong id="checkout-contagem" aria-live="polite"></strong></p>
+
+            <div id="acoes-checkout" class="acoes">
+                <!-- #7: botão de confirmar o Pagamento simulado (id="botao-confirmar") -->
+
+                <button type="button" id="botao-voltar-selecao" class="secundario">Voltar à seleção</button>
+
+                <!-- #8: botão de cancelar a Reserva (id="botao-cancelar") -->
+            </div>
+        </section>
+
+        <!-- Tela 4: confirmação da Venda (#7 preenche) -->
+        <section id="tela-venda" class="tela" hidden>
+            <!-- #7: quantidade, total e identificador da Venda -->
+        </section>
     </main>
 </body>
 </html>
