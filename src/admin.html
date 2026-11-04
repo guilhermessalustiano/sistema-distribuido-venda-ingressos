@@ -18,6 +18,35 @@
         <div id="aviso" class="aviso" role="alert" hidden></div>
         <p id="status" class="carregando" role="status" hidden></p>
 
+        <div class="acoes-painel">
+            <button type="button" id="botao-atualizar" class="secundario">Atualizar painel</button>
+        </div>
+
+        <section id="acompanhamento" class="tela" hidden>
+            <h2>Acompanhamento</h2>
+            <p>Os totais e os tempos restantes correspondem à última atualização.</p>
+            <dl class="detalhes">
+                <dt>Ingressos vendidos</dt>
+                <dd id="vendidos"></dd>
+                <dt>Ingressos reservados</dt>
+                <dd id="reservados"></dd>
+                <dt>Estoque disponível</dt>
+                <dd id="estoque-disponivel"></dd>
+                <dt>Vendas</dt>
+                <dd id="quantidade-vendas"></dd>
+                <dt>Total arrecadado</dt>
+                <dd id="total-arrecadado"></dd>
+            </dl>
+
+            <h3>Reservas ativas</h3>
+            <p id="sem-reservas">Nenhuma Reserva ativa.</p>
+            <ul id="reservas-ativas" class="registros-painel" hidden></ul>
+
+            <h3>Vendas</h3>
+            <p id="sem-vendas">Nenhuma Venda registrada.</p>
+            <ul id="vendas" class="registros-painel" hidden></ul>
+        </section>
+
         <section class="tela">
             <h2>Configuração do Evento</h2>
             <p>Painel público da demonstração. Qualquer pessoa com o endereço pode alterar a configuração.</p>
@@ -38,7 +67,6 @@
                     <button type="submit">Salvar configuração</button>
                 </fieldset>
             </form>
-            <button type="button" id="botao-atualizar" class="secundario">Atualizar painel</button>
         </section>
     </main>
 </body>

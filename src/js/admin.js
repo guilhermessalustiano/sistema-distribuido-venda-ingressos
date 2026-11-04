@@ -1,4 +1,5 @@
 import { api } from './api.js';
+import { formatarRestante } from './contagem.js';
 
 const aviso = document.getElementById('aviso');
 const status = document.getElementById('status');
@@ -6,6 +7,13 @@ const form = document.getElementById('form-configuracao');
 const campos = document.getElementById('campos-configuracao');
 const botaoAtualizar = document.getElementById('botao-atualizar');
 const entradas = Array.from(form.querySelectorAll('input'));
+const acompanhamento = document.getElementById('acompanhamento');
+const listaReservas = document.getElementById('reservas-ativas');
+const listaVendas = document.getElementById('vendas');
+const semReservas = document.getElementById('sem-reservas');
+const semVendas = document.getElementById('sem-vendas');
+const moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const dataHora = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'medium' });
 
 function avisar(tipo, mensagem) {
   aviso.className = `aviso ${tipo.toLowerCase()}`;
@@ -23,9 +31,42 @@ function mostrarConfiguracao(evento) {
   form.hidden = false;
 }
 
+function mostrarAcompanhamento(dados) {
+  listaReservas.replaceChildren();
+  listaVendas.replaceChildren();
+
+  document.getElementById('vendidos').textContent = dados.vendidos;
+  document.getElementById('reservados').textContent = dados.reservados;
+  document.getElementById('estoque-disponivel').textContent = dados.estoque_disponivel;
+  document.getElementById('quantidade-vendas').textContent = dados.quantidade_vendas;
+  document.getElementById('total-arrecadado').textContent = moeda.format(dados.total_arrecadado);
+
+  const agoraBanco = Date.parse(dados.agora);
+  for (const reserva of dados.reservas_ativas) {
+    const item = document.createElement('li');
+    const restante = formatarRestante(Date.parse(reserva.expira_em) - agoraBanco);
+    item.textContent = `${reserva.nome_sessao} · Quantidade ${reserva.quantidade} · Restam ${restante}`;
+    listaReservas.append(item);
+  }
+  listaReservas.hidden = dados.reservas_ativas.length === 0;
+  semReservas.hidden = !listaReservas.hidden;
+
+  for (const venda of dados.vendas) {
+    const item = document.createElement('li');
+    item.textContent = `${venda.nome_sessao} · Quantidade ${venda.quantidade} · `
+      + `${moeda.format(venda.preco_unitario)} por Ingresso · Total ${moeda.format(venda.total)} · `
+      + dataHora.format(new Date(venda.criada_em));
+    listaVendas.append(item);
+  }
+  listaVendas.hidden = dados.vendas.length === 0;
+  semVendas.hidden = !listaVendas.hidden;
+  acompanhamento.hidden = false;
+}
+
 async function carregarPainel() {
   const dados = await api.adminConsultar();
   mostrarConfiguracao(dados.evento);
+  mostrarAcompanhamento(dados);
 }
 
 async function executar(acao, mensagem) {
@@ -79,6 +120,11 @@ form.addEventListener('submit', (evento) => {
       return;
     }
     mostrarConfiguracao(resposta.evento);
+    try {
+      await carregarPainel();
+    } catch (falha) {
+      throw new Error(`Configuração salva. Não foi possível atualizar o painel. ${falha.message}`);
+    }
     mostrarStatus('Configuração salva.');
   }, 'Salvando configuração…');
 });

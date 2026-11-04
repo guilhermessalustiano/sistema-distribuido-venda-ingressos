@@ -125,3 +125,14 @@ input[type="number"] {
 .configuracao button { justify-self: start; margin-top: 8px; }
 
 #form-configuracao[hidden] { display: none; }
+
+.acoes-painel { margin-bottom: 16px; }
+
+#acompanhamento .detalhes dd { overflow-wrap: anywhere; }
+
+.registros-painel {
+    margin: 0;
+    padding-inline-start: 24px;
+    overflow-wrap: anywhere;
+}
+.registros-painel li + li { margin-top: 8px; }
