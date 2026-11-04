@@ -46,10 +46,13 @@ Todas devolvem JSON: `{ ok: true, ... }` em caso de sucesso ou uma **Recusa** `{
 | `consultar_evento` | `p_sessao_id` (opcional) | `evento` (`nome`, `descricao`, `local`, `data`, `preco`, `limite_por_reserva`), `estoque_disponivel`, `esgotado`, `agora` (relógio do banco), `sessao` (`id`, `nome`) e `reserva` (Reserva ativa não expirada da Sessão, no mesmo formato de `reservar`, ou `null`) | `sessao_invalida` |
 | `reservar` | `p_sessao_id`, `p_quantidade` (número JSON inteiro) | `reserva` (`id`, `quantidade`, `preco_unitario`, `total`, `expira_em`), `agora` (relógio do banco) e `estoque_disponivel` | `sessao_invalida`, `quantidade_invalida` (zero, negativa, fracionária, texto, booleano ou nula), `limite_excedido`, `estoque_insuficiente` (com `estoque_disponivel`) |
 | `cancelar_reserva` | `p_sessao_id`, `p_reserva_id` | `estoque_disponivel` (já com os Ingressos devolvidos) | `sessao_invalida`, `reserva_inexistente` (não existe ou é de outra Sessão), `reserva_ja_finalizada` (convertida em Venda) |
+| `confirmar_pagamento` | `p_sessao_id`, `p_reserva_id` | `venda` (`id`, `quantidade`, `preco_unitario`, `total`, `criada_em`) e `estoque_disponivel` | `sessao_invalida`, `reserva_inexistente` (não existe ou é de outra Sessão), `reserva_ja_finalizada` (cancelada ou já confirmada), `reserva_expirada` |
 
 `reservar` substitui a Reserva ativa anterior da Sessão (os Ingressos dela contam como livres para a nova). Qualquer Recusa deixa tudo como estava, inclusive a Reserva anterior. Reservas expiradas não são apagadas: só deixam de contar no Estoque disponível, sem processo agendado.
 
 `cancelar_reserva` é idempotente: cancelar de novo uma Reserva da própria Sessão já cancelada (ou substituída) devolve sucesso sem alterar nada.
+
+`confirmar_pagamento` trava o Evento e a Reserva, então confirmações simultâneas da mesma Reserva geram uma única Venda (as demais recebem `reserva_ja_finalizada`). O prazo é conferido com o relógio do banco no momento da confirmação (`clock_timestamp()`, depois das travas), e a Venda guarda o Preço unitário e o total da Reserva.
 
 O Estoque disponível é sempre calculado (Capacidade − vendidos − Reservas ativas não expiradas), na função interna `interno.estoque_disponivel()`.
 
