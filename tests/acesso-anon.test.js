@@ -10,6 +10,7 @@ const FUNCOES_PUBLICAS = [
   'iniciar_sessao',
   'consultar_evento',
   'reservar',
+  'confirmar_pagamento',
 ];
 
 const anon = clienteAnon();
