@@ -3,7 +3,7 @@
 const CHAVE = 'venda-ingressos:sessao_id';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Reserva em memória caso o sessionStorage esteja bloqueado (a Sessão então vale só até o reload).
+// Cópia em memória caso o sessionStorage esteja bloqueado (a Sessão então vale só até o reload).
 let memoria = null;
 
 export const sessao = {

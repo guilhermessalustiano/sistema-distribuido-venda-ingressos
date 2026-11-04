@@ -4,7 +4,7 @@ insert into public.evento (id, nome, descricao, local, data, preco, capacidade, 
 values (
   1,
   'Noite de Sistemas Distribuídos',
-  'Show de encerramento da disciplina de Sistemas Distribuídos: várias Sessões, em máquinas diferentes, disputando os mesmos Ingressos.',
+  'Encerramento da disciplina de Sistemas Distribuídos: várias Sessões, em máquinas diferentes, disputando os mesmos Ingressos.',
   'Auditório Central',
   '2026-12-12 20:00:00-03',
   80.00,

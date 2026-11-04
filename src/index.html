@@ -24,7 +24,7 @@
         <!-- Tela 1: entrada do nome (cria a Sessão) -->
         <section id="tela-nome" class="tela" hidden>
             <h2>Quem é você?</h2>
-            <p>Informe só o seu nome para participar da compra. Não é preciso criar conta.</p>
+            <p>Informe só o seu nome para reservar Ingressos. Não é preciso criar conta.</p>
             <form id="form-nome" novalidate>
                 <label for="campo-nome">Nome</label>
                 <input id="campo-nome" name="nome" type="text" maxlength="80" autocomplete="name" required>
@@ -47,7 +47,7 @@
             <div class="estoque">
                 <p>Estoque disponível: <strong id="estoque-disponivel"></strong></p>
                 <p id="esgotado" class="esgotado" hidden>Esgotado</p>
-                <button type="button" id="botao-atualizar" class="secundario">Atualizar estoque</button>
+                <button type="button" id="botao-atualizar" class="secundario">Atualizar Estoque disponível</button>
             </div>
 
             <!-- Seleção de quantidade e Reserva -->
@@ -56,7 +56,7 @@
                 <div id="reserva-pendente" class="reserva-pendente" hidden>
                     <p>Você tem uma Reserva ativa de <strong id="pendente-quantidade"></strong> Ingresso(s),
                         expira em <strong id="pendente-contagem"></strong>.
-                        Reservar de novo substitui a Reserva atual.</p>
+                        Reservar de novo cancela a Reserva atual, mesmo que a nova tenha Recusa.</p>
                     <button type="button" id="botao-voltar-checkout" class="secundario">Voltar ao Checkout</button>
                 </div>
 
@@ -99,7 +99,7 @@
                 <dt>Identificador da Venda</dt><dd><code id="venda-id"></code></dd>
             </dl>
             <div class="acoes">
-                <button type="button" id="botao-nova-compra" class="secundario">Voltar ao Evento</button>
+                <button type="button" id="botao-voltar-evento" class="secundario">Voltar ao Evento</button>
             </div>
         </section>
     </main>

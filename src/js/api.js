@@ -1,7 +1,7 @@
 // Única porta do navegador para o banco: funções RPC publicadas (ADR 0001).
 // Cada função devolve { ok: true, ... } ou uma Recusa { ok: false, motivo }.
 // Qualquer erro do Postgres ou da rede é uma Falha, lançada como exceção `Falha`.
-// Para uma função nova (#6 em diante), acrescente um método em `api` chamando `chamar`.
+// Para uma função nova, acrescente um método em `api` chamando `chamar`.
 import { config } from './config.js';
 import { sessao } from './sessao.js';
 
@@ -56,8 +56,7 @@ async function chamar(funcao, args) {
   return data;
 }
 
-// Um método por função RPC (um por linha). confirmar_pagamento (#7) e cancelar_reserva (#8)
-// já estão declarados conforme o contrato da spec #3; as funções no banco chegam nesses tickets.
+// Um método por função RPC (um por linha), conforme o contrato da spec #3.
 export const api = {
   iniciarSessao: (nome) => chamar('iniciar_sessao', { p_nome: nome }),
   consultarEvento: (sessaoId) => chamar('consultar_evento', sessaoId ? { p_sessao_id: sessaoId } : {}),

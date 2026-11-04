@@ -3,7 +3,9 @@
 // local corrige navegadores com relógio adiantado ou atrasado. O banco continua sendo a autoridade:
 // a contagem só decide o que mostrar.
 
-export function criarContagem({ expiraEm, agoraBanco, aoAtualizar, aoZerar, intervaloMs = 250 }) {
+const INTERVALO_MS = 250;
+
+export function criarContagem({ expiraEm, agoraBanco, aoAtualizar, aoZerar }) {
   const deslocamentoMs = Date.parse(agoraBanco) - Date.now();
   const expiraMs = Date.parse(expiraEm);
   const restanteMs = () => Math.max(0, expiraMs - (Date.now() + deslocamentoMs));
@@ -22,9 +24,9 @@ export function criarContagem({ expiraEm, agoraBanco, aoAtualizar, aoZerar, inte
     timer = null;
   }
 
-  timer = setInterval(passo, intervaloMs);
+  timer = setInterval(passo, INTERVALO_MS);
   passo();
-  return { parar, restanteMs };
+  return { parar };
 }
 
 // 125000 ms → "2:05"

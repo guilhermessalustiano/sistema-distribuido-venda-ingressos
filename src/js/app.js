@@ -1,10 +1,5 @@
 // Fluxo de telas: nome → vitrine/seleção → Checkout → Venda.
 // Regras de negócio ficam no banco; aqui só exibimos o que as funções devolvem.
-//
-// Pontos de extensão para os tickets seguintes (cada um em sua seção, para não conflitar):
-//   #7 (confirmar_pagamento): seção "---- Checkout: confirmar (#7) ----" e a tela #tela-venda.
-//   #8 (cancelar_reserva):    seção "---- Checkout: cancelar (#8) ----".
-// Use reservaAtual(), sairDoCheckout(), irParaSelecao() e carregarVitrine() em vez de mexer no estado direto.
 import { api, Falha, quandoSessaoInvalida } from './api.js';
 import { sessao } from './sessao.js';
 import { criarContagem, formatarRestante } from './contagem.js';
@@ -18,7 +13,7 @@ const MENSAGENS_RECUSA = {
   quantidade_invalida: 'Informe uma quantidade inteira a partir de 1.',
   limite_excedido: 'A quantidade passa do Limite por reserva.',
   estoque_insuficiente: 'Não há Ingressos suficientes no Estoque disponível.',
-  reserva_expirada: 'Reserva expirada: o Tempo de reserva acabou e os Ingressos voltaram ao estoque.',
+  reserva_expirada: 'Reserva expirada: o Tempo de reserva acabou e os Ingressos voltaram ao Estoque disponível.',
   reserva_inexistente: 'Essa Reserva não existe (ou não é desta sessão).',
   reserva_ja_finalizada: 'Essa Reserva já foi cancelada ou confirmada.',
 };
@@ -57,7 +52,12 @@ function avisar(tipo, titulo, detalhe) {
 
 function avisarRecusa(motivo, detalheExtra = '') {
   const texto = MENSAGENS_RECUSA[motivo] ?? `Motivo: ${motivo}.`;
-  avisar('recusa', 'Pedido recusado', detalheExtra ? `${texto} ${detalheExtra}` : texto);
+  avisar('recusa', 'Recusa', detalheExtra ? `${texto} ${detalheExtra}` : texto);
+}
+
+// Recusa sessao_invalida já levou à tela de nome (api.js, quandoSessaoInvalida): quem chamou só para.
+function sessaoInvalidada(r) {
+  return !r.ok && r.motivo === 'sessao_invalida';
 }
 
 function avisarFalha(erro) {
@@ -79,7 +79,6 @@ async function comBotaoBloqueado(botao, acao) {
     avisarFalha(erro);
   } finally {
     botao.disabled = false;
-    atualizarBotaoReservar();
   }
 }
 
@@ -100,10 +99,6 @@ let esgotadoAtual = false;
 // Reserva ativa da Sessão e a contagem regressiva dela.
 let reserva = null;
 let contagem = null;
-
-export function reservaAtual() {
-  return reserva;
-}
 
 // ---- tela de nome ----
 
@@ -184,7 +179,7 @@ function atualizarTotalSelecao() {
 $('campo-quantidade').addEventListener('input', atualizarTotalSelecao);
 
 // Mostra a vitrine/seleção; se houver Reserva ativa, avisa que reservar de novo a substitui.
-export function irParaSelecao() {
+function irParaSelecao() {
   $('reserva-pendente').hidden = !reserva;
   if (reserva) $('pendente-quantidade').textContent = String(reserva.quantidade);
   atualizarBotaoReservar();
@@ -192,13 +187,10 @@ export function irParaSelecao() {
 }
 
 // Lê o Evento para a Sessão atual e vai para o Checkout (se houver Reserva ativa) ou para a seleção.
-// Recusa sessao_invalida já é tratada em api.js.
-export async function carregarVitrine() {
+async function carregarVitrine() {
   const r = await api.consultarEvento(sessao.id());
-  if (!r.ok) {
-    if (r.motivo !== 'sessao_invalida') avisarRecusa(r.motivo);
-    return;
-  }
+  if (sessaoInvalidada(r)) return;
+  if (!r.ok) return avisarRecusa(r.motivo);
   exibirVitrine(r);
   if (r.reserva) irParaCheckout(r.reserva, r.agora);
   else {
@@ -211,35 +203,37 @@ $('botao-atualizar').addEventListener('click', () => {
   limparAviso();
   comBotaoBloqueado($('botao-atualizar'), async () => {
     const r = await api.consultarEvento(sessao.id());
+    if (sessaoInvalidada(r)) return;
     if (r.ok) exibirEstoque(r);
-    else if (r.motivo !== 'sessao_invalida') avisarRecusa(r.motivo);
+    else avisarRecusa(r.motivo);
   });
 });
 
-$('form-reserva').addEventListener('submit', (evento) => {
+// `pendente` impede que exibirEstoque reabilite o botão no meio da chamada.
+$('form-reserva').addEventListener('submit', async (evento) => {
   evento.preventDefault();
   limparAviso();
   const botao = $('botao-reservar');
   botao.dataset.pendente = 'sim';
-  comBotaoBloqueado(botao, async () => {
-    try {
-      const r = await api.reservar(sessao.id(), quantidadeDigitada());
-      if (r.ok) {
-        exibirEstoque({ estoque_disponivel: r.estoque_disponivel });
-        irParaCheckout(r.reserva, r.agora);
-        return;
-      }
-      if (r.motivo === 'sessao_invalida') return;
-      if (r.motivo === 'estoque_insuficiente') {
-        exibirEstoque({ estoque_disponivel: r.estoque_disponivel });
-        avisarRecusa(r.motivo, `Estoque disponível agora: ${r.estoque_disponivel}.`);
-        return;
-      }
-      avisarRecusa(r.motivo);
-    } finally {
-      delete botao.dataset.pendente;
+  await comBotaoBloqueado(botao, async () => {
+    const r = await api.reservar(sessao.id(), quantidadeDigitada());
+    if (r.ok) {
+      exibirEstoque({ estoque_disponivel: r.estoque_disponivel });
+      irParaCheckout(r.reserva, r.agora);
+      return;
     }
+    if (sessaoInvalidada(r)) return;
+    // Com a Sessão válida, a Recusa também cancelou a Reserva anterior (spec #3): esquece a local
+    // e relê a vitrine, já com os Ingressos dela de volta ao Estoque disponível.
+    sairDoCheckout();
+    avisarRecusa(
+      r.motivo,
+      r.motivo === 'estoque_insuficiente' ? `Estoque disponível agora: ${r.estoque_disponivel}.` : '',
+    );
+    await carregarVitrine();
   });
+  delete botao.dataset.pendente;
+  atualizarBotaoReservar();
 });
 
 $('botao-voltar-checkout').addEventListener('click', () => {
@@ -257,7 +251,7 @@ function exibirRestante(ms) {
 
 // Entra no Checkout com a Reserva devolvida pelo banco (por reservar ou consultar_evento).
 // `agora` é o horário do banco na mesma resposta, usado para corrigir o relógio local.
-export function irParaCheckout(novaReserva, agora) {
+function irParaCheckout(novaReserva, agora) {
   sairDoCheckout();
   reserva = novaReserva;
   $('checkout-quantidade').textContent = String(reserva.quantidade);
@@ -274,7 +268,7 @@ export function irParaCheckout(novaReserva, agora) {
 }
 
 // Esquece a Reserva local e para a contagem (após expirar, cancelar, confirmar ou trocar de Sessão).
-export function sairDoCheckout() {
+function sairDoCheckout() {
   contagem?.parar();
   contagem = null;
   reserva = null;
@@ -293,7 +287,7 @@ $('botao-voltar-selecao').addEventListener('click', () => {
   irParaSelecao();
 });
 
-// ---- Checkout: confirmar (#7) ----
+// ---- Checkout: confirmar ----
 
 function exibirVenda(venda) {
   $('venda-quantidade').textContent = String(venda.quantidade);
@@ -305,7 +299,7 @@ function exibirVenda(venda) {
 // O banco é a autoridade do prazo: mesmo com a contagem ainda positiva, pode recusar reserva_expirada.
 $('botao-confirmar').addEventListener('click', () => {
   limparAviso();
-  const atual = reservaAtual();
+  const atual = reserva;
   if (!atual) return;
   comBotaoBloqueado($('botao-confirmar'), async () => {
     const r = await api.confirmarPagamento(sessao.id(), atual.id);
@@ -315,7 +309,7 @@ $('botao-confirmar').addEventListener('click', () => {
       exibirVenda(r.venda);
       return;
     }
-    if (r.motivo === 'sessao_invalida') return;
+    if (sessaoInvalidada(r)) return;
     // Expirada, já finalizada ou inexistente: a Reserva local não vale mais; volta à seleção.
     sairDoCheckout();
     avisarRecusa(r.motivo);
@@ -323,22 +317,22 @@ $('botao-confirmar').addEventListener('click', () => {
   });
 });
 
-$('botao-nova-compra').addEventListener('click', () => {
+$('botao-voltar-evento').addEventListener('click', () => {
   limparAviso();
-  comBotaoBloqueado($('botao-nova-compra'), carregarVitrine);
+  comBotaoBloqueado($('botao-voltar-evento'), carregarVitrine);
 });
 
-// ---- Checkout: cancelar (#8) ----
+// ---- Checkout: cancelar ----
 
 // Cancela a Reserva e volta à seleção com o Estoque disponível relido do banco.
 // cancelar_reserva é idempotente: Reserva já cancelada também volta como sucesso.
 $('botao-cancelar').addEventListener('click', () => {
   limparAviso();
-  const atual = reservaAtual();
+  const atual = reserva;
   if (!atual) return;
   comBotaoBloqueado($('botao-cancelar'), async () => {
     const r = await api.cancelarReserva(sessao.id(), atual.id);
-    if (!r.ok && r.motivo === 'sessao_invalida') return;
+    if (sessaoInvalidada(r)) return;
     sairDoCheckout();
     if (!r.ok) avisarRecusa(r.motivo);
     await carregarVitrine();
