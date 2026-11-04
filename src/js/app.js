@@ -297,6 +297,21 @@ $('botao-voltar-selecao').addEventListener('click', () => {
 
 // ---- Checkout: cancelar (#8) ----
 
+// Cancela a Reserva e volta à seleção com o Estoque disponível relido do banco.
+// cancelar_reserva é idempotente: Reserva já cancelada também volta como sucesso.
+$('botao-cancelar').addEventListener('click', () => {
+  limparAviso();
+  const atual = reservaAtual();
+  if (!atual) return;
+  comBotaoBloqueado($('botao-cancelar'), async () => {
+    const r = await api.cancelarReserva(sessao.id(), atual.id);
+    if (!r.ok && r.motivo === 'sessao_invalida') return;
+    sairDoCheckout();
+    if (!r.ok) avisarRecusa(r.motivo);
+    await carregarVitrine();
+  });
+});
+
 // ---- início ----
 
 async function iniciar() {
