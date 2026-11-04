@@ -14,7 +14,8 @@
 -- Concorrência: cancelar só libera estoque, então não trava o Evento. Trava a linha da Reserva
 -- (FOR UPDATE), o que serializa com confirmar_pagamento (que também trava a Reserva): se a
 -- confirmação vier depois, relê a linha já cancelada e recusa; se vier antes, o cancelamento
--- encontra 'convertida' e recusa.
+-- encontra 'convertida' e recusa. O Estoque disponível devolvido usa clock_timestamp() lido
+-- depois dessa trava (a espera pela confirmação não conta Reservas já expiradas como ativas).
 -- ---------------------------------------------------------------------------
 create function public.cancelar_reserva(p_sessao_id uuid default null, p_reserva_id uuid default null)
 returns jsonb
@@ -26,7 +27,7 @@ as $$
 declare
   v_situacao text;
 begin
-  if p_sessao_id is null or not exists (select 1 from public.sessao where id = p_sessao_id) then
+  if not interno.sessao_existe(p_sessao_id) then
     return jsonb_build_object('ok', false, 'motivo', 'sessao_invalida');
   end if;
 
@@ -50,7 +51,7 @@ begin
 
   return jsonb_build_object(
     'ok', true,
-    'estoque_disponivel', greatest(interno.estoque_disponivel(), 0)
+    'estoque_disponivel', interno.estoque_disponivel(clock_timestamp())
   );
 end;
 $$;

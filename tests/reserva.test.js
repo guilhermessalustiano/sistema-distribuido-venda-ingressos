@@ -10,10 +10,10 @@ import {
   reservarOk,
   estoqueVisto,
   esperar,
+  segurarTravaDoEvento,
+  UUID,
   EVENTO_TESTE,
 } from './apoio/banco.js';
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 beforeEach(() => prepararBanco());
 
@@ -161,25 +161,41 @@ test('na substituição, os Ingressos da Reserva anterior contam como livres par
   assert.equal(r.estoque_disponivel, 0);
 });
 
-test('substituição recusada mantém a Reserva anterior', async () => {
+test('substituição recusada por estoque cancela a anterior e informa o Estoque disponível com os Ingressos dela livres', async () => {
   await prepararBanco({ capacidade: 6 });
   const a = await novaSessao('A');
   const b = await novaSessao('B');
-  const anterior = await reservarOk(a, 2);
+  await reservarOk(a, 2);
   await reservarOk(b, 3); // sobra 1 (+2 da própria A)
   const r = await reservar(a, 4);
-  assert.equal(r.ok, false);
-  assert.equal(r.motivo, 'estoque_insuficiente');
+  assert.deepEqual(r, { ok: false, motivo: 'estoque_insuficiente', estoque_disponivel: 3 });
   const c = await rpc('consultar_evento', { p_sessao_id: a });
-  assert.equal(c.reserva?.id, anterior.id, 'a Reserva anterior continua ativa');
-  assert.equal(await estoqueVisto(), 1);
+  assert.equal(c.reserva, null, 'a Reserva anterior foi cancelada antes da Recusa');
+  assert.equal(await estoqueVisto(), 3);
 });
 
-test('substituição com quantidade inválida mantém a Reserva anterior', async () => {
+for (const [descricao, quantidade, motivo] of [
+  ['quantidade inválida', 0, 'quantidade_invalida'],
+  ['quantidade acima do Limite por reserva', EVENTO_TESTE.limite_por_reserva + 1, 'limite_excedido'],
+]) {
+  test(`substituição recusada por ${descricao} também cancela a Reserva anterior`, async () => {
+    const id = await novaSessao();
+    const anterior = await reservarOk(id, 2);
+    assert.deepEqual(await reservar(id, quantidade), { ok: false, motivo });
+    const c = await rpc('consultar_evento', { p_sessao_id: id });
+    assert.equal(c.reserva, null);
+    assert.equal(await estoqueVisto(), EVENTO_TESTE.capacidade);
+    assert.deepEqual(await rpc('cancelar_reserva', { p_sessao_id: id, p_reserva_id: anterior.id }), {
+      ok: true,
+      estoque_disponivel: EVENTO_TESTE.capacidade,
+    });
+  });
+}
+
+test('Recusa sessao_invalida não mexe na Reserva de ninguém', async () => {
   const id = await novaSessao();
   const anterior = await reservarOk(id, 2);
-  assert.equal((await reservar(id, 0)).motivo, 'quantidade_invalida');
-  assert.equal((await reservar(id, 99)).motivo, 'limite_excedido');
+  assert.equal((await reservar(crypto.randomUUID(), 0)).motivo, 'sessao_invalida');
   const c = await rpc('consultar_evento', { p_sessao_id: id });
   assert.equal(c.reserva?.id, anterior.id);
 });
@@ -241,4 +257,34 @@ test('Sessão com Reserva expirada pode reservar de novo', async () => {
   const r = await reservar(id, 4);
   assert.equal(r.ok, true, `recusou com ${r.motivo}`);
   assert.equal(await estoqueVisto(), EVENTO_TESTE.capacidade - 4);
+});
+
+// ---- Relógio depois da trava do Evento ----
+// Uma chamada que esperou na fila do Evento usa o horário de quando obteve a trava (clock_timestamp()),
+// e não o do início da transação (now()), como confirmar_pagamento.
+
+test('reservar que esperou a trava do Evento conta expiração e Tempo de reserva a partir de quando a obteve', async () => {
+  await prepararBanco({ tempo_reserva_segundos: 120 });
+  const id = await novaSessao();
+  const { agora: antes } = await rpc('consultar_evento');
+  const trava = await segurarTravaDoEvento(1_500);
+  const r = await reservar(id, 1);
+  await trava.liberada;
+  assert.equal(r.ok, true, `recusou com ${r.motivo}`);
+  const esperou = Date.parse(r.agora) - Date.parse(antes);
+  assert.ok(esperou >= 1_000, `agora devolvido (${r.agora}) é de antes da trava (${antes})`);
+  const prazo = Date.parse(r.reserva.expira_em) - Date.parse(r.agora);
+  assert.ok(Math.abs(prazo - 120_000) < 200, `expira_em ${r.reserva.expira_em} vs agora ${r.agora}`);
+});
+
+test('reservar que esperou a trava do Evento já conta como livres os Ingressos de Reservas que expiraram na espera', async () => {
+  await prepararBanco({ capacidade: 3, tempo_reserva_segundos: 1 });
+  const a = await novaSessao('A');
+  const b = await novaSessao('B');
+  await reservarOk(a, 3);
+  const trava = await segurarTravaDoEvento(2_000);
+  const r = await reservar(b, 3); // começa antes de a Reserva da A expirar e obtém a trava depois
+  await trava.liberada;
+  assert.equal(r.ok, true, `recusou com ${r.motivo} (estoque ${r.estoque_disponivel})`);
+  assert.equal(r.estoque_disponivel, 0);
 });

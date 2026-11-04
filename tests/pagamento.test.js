@@ -13,14 +13,11 @@ import {
   estoqueVisto,
   esperar,
   ingressosComprometidos,
+  confirmar,
+  segurarTravaDoEvento,
+  UUID,
   EVENTO_TESTE,
 } from './apoio/banco.js';
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function confirmar(sessaoId, reservaId, cliente) {
-  return rpc('confirmar_pagamento', { p_sessao_id: sessaoId, p_reserva_id: reservaId }, cliente);
-}
 
 beforeEach(() => prepararBanco());
 
@@ -241,4 +238,18 @@ test('Reserva expirada disputada: confirmação recusada e os Ingressos ficam pa
   const { vendidos, reservados } = await ingressosComprometidos();
   assert.equal(vendidos, 0);
   assert.equal(reservados, 3);
+});
+
+test('confirmação que esperou a trava do Evento devolve o Estoque disponível pelo relógio de depois da trava', async () => {
+  await prepararBanco({ capacidade: 5, tempo_reserva_segundos: 120 });
+  const ana = await novaSessao('Ana');
+  const bia = await novaSessao('Bia');
+  const reserva = await reservarOk(ana, 3);
+  await configurarEvento({ tempo_reserva_segundos: 1 });
+  await reservarOk(bia, 2); // expira durante a espera
+  const trava = await segurarTravaDoEvento(2_000);
+  const r = await confirmar(ana, reserva.id);
+  await trava.liberada;
+  assert.equal(r.ok, true, `recusou com ${r.motivo}`);
+  assert.equal(r.estoque_disponivel, 2, 'os Ingressos da Reserva expirada da Bia já contam como livres');
 });

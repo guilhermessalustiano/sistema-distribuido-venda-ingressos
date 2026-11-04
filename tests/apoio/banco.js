@@ -2,8 +2,12 @@
 // - clienteAnon(): exatamente o que o navegador usa (chave anon). Asserções de comportamento só usam este.
 // - clienteServico(): privilégio de teste (service_role), só para preparar o cenário
 //   (configurar o Evento, limpar dados) e para conferências de integridade.
+import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import { ambiente } from './ambiente.js';
+
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const opcoes = { auth: { persistSession: false, autoRefreshToken: false } };
 
@@ -72,6 +76,11 @@ export async function reservarOk(sessaoId, quantidade) {
   return r.reserva;
 }
 
+// Pagamento simulado como o navegador. Devolve a resposta da função (sucesso ou Recusa).
+export function confirmar(sessaoId, reservaId, cliente) {
+  return rpc('confirmar_pagamento', { p_sessao_id: sessaoId, p_reserva_id: reservaId }, cliente);
+}
+
 // Estoque disponível como qualquer Sessão o vê (consultar_evento sem Sessão).
 export async function estoqueVisto() {
   const r = await rpc('consultar_evento');
@@ -79,6 +88,40 @@ export async function estoqueVisto() {
 }
 
 export const esperar = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Privilégio de teste: segura a trava da linha do Evento por `ms` numa transação à parte (psql
+// dentro do container do banco local), para que as chamadas feitas nesse intervalo esperem na fila.
+// Resolve quando a trava foi obtida; `liberada` resolve quando a transação termina.
+// Container: SUPABASE_DB_CONTAINER ou supabase_db_<project_id de supabase/config.toml>.
+function containerDoBanco() {
+  if (process.env.SUPABASE_DB_CONTAINER) return process.env.SUPABASE_DB_CONTAINER;
+  const toml = readFileSync(new URL('../../supabase/config.toml', import.meta.url), 'utf8');
+  const projeto = toml.match(/^project_id\s*=\s*"([^"]+)"/m)?.[1];
+  if (!projeto) throw new Error('project_id não encontrado em supabase/config.toml');
+  return `supabase_db_${projeto}`;
+}
+
+export function segurarTravaDoEvento(ms) {
+  return new Promise((travada, falhou) => {
+    const psql = spawn('docker', ['exec', '-i', containerDoBanco(), 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1'], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    let erro = '';
+    psql.stderr.on('data', (d) => (erro += d));
+    const liberada = new Promise((ok, nok) => {
+      psql.on('error', nok);
+      psql.on('exit', (codigo) => (codigo === 0 ? ok() : nok(new Error(`psql saiu com ${codigo}: ${erro}`))));
+    });
+    liberada.catch(falhou);
+    psql.stdout.once('data', () => travada({ liberada }));
+    psql.stdin.end(
+      'begin;\n' +
+        "select 'travado' from public.evento where id = 1 for update;\n" +
+        `select pg_sleep(${ms / 1000});\n` +
+        'commit;\n',
+    );
+  });
+}
 
 // Conferência de integridade com privilégio de teste (separada das asserções de comportamento):
 // Ingressos vendidos e Ingressos em Reservas ativas não expiradas, pelo relógio do banco.

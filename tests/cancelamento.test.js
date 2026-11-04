@@ -10,6 +10,7 @@ import {
   estoqueVisto,
   esperar,
   clienteAnon,
+  confirmar,
   EVENTO_TESTE,
 } from './apoio/banco.js';
 
@@ -112,32 +113,24 @@ test('cancelar Reserva expirada não gera Falha e não altera o Estoque disponí
 });
 
 // ---- Reserva convertida em Venda ----
-// Depende de confirmar_pagamento (ticket #7). Enquanto a função não existir nesta branch, o teste é pulado.
 
-async function confirmarPagamentoExiste() {
-  const { error } = await clienteAnon().rpc('confirmar_pagamento', {});
-  return !(error && /^PGRST20\d$/.test(String(error.code)));
-}
-
-test('Reserva convertida em Venda não pode ser cancelada (reserva_ja_finalizada)', async (t) => {
-  if (!(await confirmarPagamentoExiste())) return t.skip('confirmar_pagamento (#7) ainda não existe nesta branch');
+test('Reserva convertida em Venda não pode ser cancelada (reserva_ja_finalizada)', async () => {
   const ana = await novaSessao('Ana');
   const reserva = await reservarOk(ana, 3);
-  const venda = await rpc('confirmar_pagamento', { p_sessao_id: ana, p_reserva_id: reserva.id });
+  const venda = await confirmar(ana, reserva.id);
   assert.equal(venda.ok, true);
 
   const r = await cancelar(ana, reserva.id);
   assert.deepEqual(r, { ok: false, motivo: 'reserva_ja_finalizada' });
-  assert.equal(await estoqueVisto(), EVENTO_TESTE.capacidade - 3, 'os Ingressos vendidos continuam fora do estoque');
+  assert.equal(await estoqueVisto(), EVENTO_TESTE.capacidade - 3, 'os Ingressos vendidos continuam fora do Estoque disponível');
 });
 
-test('Reserva cancelada não pode ser confirmada', async (t) => {
-  if (!(await confirmarPagamentoExiste())) return t.skip('confirmar_pagamento (#7) ainda não existe nesta branch');
+test('Reserva cancelada não pode ser confirmada', async () => {
   const ana = await novaSessao('Ana');
   const reserva = await reservarOk(ana, 3);
   await cancelar(ana, reserva.id);
 
-  const r = await rpc('confirmar_pagamento', { p_sessao_id: ana, p_reserva_id: reserva.id });
+  const r = await confirmar(ana, reserva.id);
   assert.equal(r.ok, false);
   assert.equal(r.motivo, 'reserva_ja_finalizada');
   assert.equal(await estoqueVisto(), EVENTO_TESTE.capacidade, 'nenhum Ingresso foi vendido');

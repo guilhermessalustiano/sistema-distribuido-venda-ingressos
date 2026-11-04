@@ -43,8 +43,11 @@ for (const tabela of TABELAS) {
 }
 
 test('anon não chama funções internas', async () => {
-  assertNegado(await anon.rpc('estoque_disponivel'), 'rpc estoque_disponivel');
-  assertNegado(await anon.schema('interno').rpc('estoque_disponivel'), 'rpc interno.estoque_disponivel');
+  const agora = { p_agora: new Date().toISOString() };
+  assertNegado(await anon.rpc('estoque_disponivel', agora), 'rpc estoque_disponivel');
+  assertNegado(await anon.schema('interno').rpc('estoque_disponivel', agora), 'rpc interno.estoque_disponivel');
+  const sessao = { p_sessao_id: '00000000-0000-4000-8000-000000000000' };
+  assertNegado(await anon.schema('interno').rpc('sessao_existe', sessao), 'rpc interno.sessao_existe');
 });
 
 test('anon chama as funções publicadas', async () => {

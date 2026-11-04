@@ -1,8 +1,6 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { prepararBanco, rpc, novaSessao } from './apoio/banco.js';
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { prepararBanco, rpc, novaSessao, UUID } from './apoio/banco.js';
 
 beforeEach(() => prepararBanco());
 

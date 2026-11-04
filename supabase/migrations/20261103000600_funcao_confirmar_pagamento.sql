@@ -12,7 +12,7 @@
 -- simultâneas da mesma Reserva entram uma por vez; a segunda relê a linha já 'convertida'
 -- e recebe reserva_ja_finalizada. O unique de venda.reserva_id é a última barreira.
 --
--- Prazo: compara com clock_timestamp() lido DEPOIS de obter as travas, e não com now()
+-- Prazo e Estoque disponível devolvido: usam clock_timestamp() lido DEPOIS de obter as travas, e não now()
 -- (início da transação). Uma chamada que esperou na fila do Evento poderia ter now() anterior
 -- à expiração enquanto uma operação que passou antes na fila já tratou essa Reserva como
 -- expirada e reutilizou os Ingressos; com o relógio atual a confirmação nunca contradiz
@@ -28,8 +28,9 @@ as $$
 declare
   v_reserva public.reserva;
   v_venda public.venda;
+  v_agora timestamptz;
 begin
-  if p_sessao_id is null or not exists (select 1 from public.sessao where id = p_sessao_id) then
+  if not interno.sessao_existe(p_sessao_id) then
     return jsonb_build_object('ok', false, 'motivo', 'sessao_invalida');
   end if;
 
@@ -55,7 +56,8 @@ begin
     return jsonb_build_object('ok', false, 'motivo', 'reserva_ja_finalizada');
   end if;
 
-  if v_reserva.expira_em <= clock_timestamp() then
+  v_agora := clock_timestamp();
+  if v_reserva.expira_em <= v_agora then
     return jsonb_build_object('ok', false, 'motivo', 'reserva_expirada');
   end if;
 
@@ -76,7 +78,7 @@ begin
       'total', v_venda.total,
       'criada_em', v_venda.criada_em
     ),
-    'estoque_disponivel', greatest(interno.estoque_disponivel(), 0)
+    'estoque_disponivel', interno.estoque_disponivel(v_agora)
   );
 end;
 $$;

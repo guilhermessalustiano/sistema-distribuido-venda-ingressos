@@ -9,27 +9,30 @@
 -- Auxiliares internas (schema interno, não expostas ao navegador)
 -- ---------------------------------------------------------------------------
 
--- Estoque disponível = Capacidade − Ingressos vendidos − Ingressos em Reservas ativas não expiradas.
--- Calculado sempre com o relógio do banco; nunca armazenado.
--- Quem cria ou consome estoque deve travar a linha do Evento (select ... for update) ANTES de chamar.
-create function interno.estoque_disponivel()
+-- Estoque disponível = Capacidade − Ingressos vendidos − Ingressos em Reservas ativas não expiradas
+-- em p_agora (nunca negativo). Calculado sempre com o relógio do banco; nunca armazenado.
+-- Quem cria ou consome estoque deve travar a linha do Evento (select ... for update) ANTES de chamar
+-- e passar clock_timestamp() lido depois da trava (ver reservar e confirmar_pagamento).
+create function interno.estoque_disponivel(p_agora timestamptz)
 returns integer
 language sql
 stable
 set search_path = ''
 as $$
-  select e.capacidade
-       - coalesce((select sum(v.quantidade) from public.venda v), 0)
-       - coalesce((select sum(r.quantidade)
-                     from public.reserva r
-                    where r.situacao = 'ativa'
-                      and r.expira_em > now()), 0)
+  select greatest(
+           e.capacidade
+           - coalesce((select sum(v.quantidade) from public.venda v), 0)
+           - coalesce((select sum(r.quantidade)
+                         from public.reserva r
+                        where r.situacao = 'ativa'
+                          and r.expira_em > p_agora), 0),
+           0)::integer
   from public.evento e
   where e.id = 1;
 $$;
 
--- Reserva ativa e não expirada de uma Sessão, no formato devolvido ao navegador (ou null).
-create function interno.reserva_vigente_json(p_sessao_id uuid)
+-- Reserva ativa e não expirada em p_agora de uma Sessão, no formato devolvido ao navegador (ou null).
+create function interno.reserva_vigente_json(p_sessao_id uuid, p_agora timestamptz)
 returns jsonb
 language sql
 stable
@@ -45,11 +48,23 @@ as $$
   from public.reserva r
   where r.sessao_id = p_sessao_id
     and r.situacao = 'ativa'
-    and r.expira_em > now();
+    and r.expira_em > p_agora;
 $$;
 
-revoke all on function interno.estoque_disponivel() from public;
-revoke all on function interno.reserva_vigente_json(uuid) from public;
+-- Guarda de Sessão das funções que exigem uma: o id foi informado e a Sessão existe.
+create function interno.sessao_existe(p_sessao_id uuid)
+returns boolean
+language sql
+stable
+set search_path = ''
+as $$
+  select p_sessao_id is not null
+     and exists (select 1 from public.sessao s where s.id = p_sessao_id);
+$$;
+
+revoke all on function interno.estoque_disponivel(timestamptz) from public;
+revoke all on function interno.reserva_vigente_json(uuid, timestamptz) from public;
+revoke all on function interno.sessao_existe(uuid) from public;
 
 -- ---------------------------------------------------------------------------
 -- iniciar_sessao(p_nome) → { ok, sessao_id } | Recusa nome_invalido
@@ -94,6 +109,8 @@ declare
   v_evento public.evento;
   v_sessao public.sessao;
   v_estoque integer;
+  -- Leitura sem travas (não espera fila), então o início da transação é o instante atual.
+  v_agora timestamptz := now();
 begin
   if p_sessao_id is not null then
     select * into v_sessao from public.sessao where id = p_sessao_id;
@@ -103,7 +120,7 @@ begin
   end if;
 
   select * into strict v_evento from public.evento where id = 1;
-  v_estoque := greatest(interno.estoque_disponivel(), 0);
+  v_estoque := interno.estoque_disponivel(v_agora);
 
   return jsonb_build_object(
     'ok', true,
@@ -117,11 +134,11 @@ begin
     ),
     'estoque_disponivel', v_estoque,
     'esgotado', v_estoque = 0,
-    'agora', now(),
+    'agora', v_agora,
     'sessao', case when p_sessao_id is null then null
                    else jsonb_build_object('id', v_sessao.id, 'nome', v_sessao.nome) end,
     'reserva', case when p_sessao_id is null then null
-                    else interno.reserva_vigente_json(p_sessao_id) end
+                    else interno.reserva_vigente_json(p_sessao_id, v_agora) end
   );
 end;
 $$;
