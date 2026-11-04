@@ -5,7 +5,12 @@ import assert from 'node:assert/strict';
 import { clienteAnon, prepararBanco } from './apoio/banco.js';
 
 const TABELAS = ['evento', 'sessao', 'reserva', 'venda'];
-const FUNCOES_PUBLICAS = ['iniciar_sessao', 'consultar_evento'];
+// Uma por linha (tickets paralelos acrescentam linhas sem conflito).
+const FUNCOES_PUBLICAS = [
+  'iniciar_sessao',
+  'consultar_evento',
+  'reservar',
+];
 
 const anon = clienteAnon();
 
