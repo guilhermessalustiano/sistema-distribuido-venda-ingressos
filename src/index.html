@@ -3,9 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistemas Distribuídos - Venda de Ingressos</title>
+    <title>Venda de Ingressos</title>
+    <link rel="stylesheet" href="css/estilo.css">
+    <!-- supabase-js via CDN, versão exata (mesma do package.json) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+    <script type="module" src="js/app.js"></script>
 </head>
 <body>
-    
+    <header class="topo">
+        <h1>Venda de Ingressos</h1>
+        <p id="saudacao" class="saudacao" hidden></p>
+    </header>
+
+    <main>
+        <!-- Mensagens: Recusa (regra de negócio) e Falha (erro técnico) têm estilos distintos. -->
+        <div id="aviso" class="aviso" role="alert" hidden></div>
+
+        <p id="carregando" class="carregando">Carregando…</p>
+
+        <!-- Tela 1: entrada do nome (cria a Sessão) -->
+        <section id="tela-nome" class="tela" hidden>
+            <h2>Quem é você?</h2>
+            <p>Informe só o seu nome para reservar Ingressos. Não é preciso criar conta.</p>
+            <form id="form-nome" novalidate>
+                <label for="campo-nome">Nome</label>
+                <input id="campo-nome" name="nome" type="text" maxlength="80" autocomplete="name" required>
+                <button type="submit" id="botao-entrar">Entrar</button>
+            </form>
+        </section>
+
+        <!-- Tela 2: vitrine do Evento -->
+        <section id="tela-vitrine" class="tela" hidden>
+            <article class="evento">
+                <h2 id="evento-nome"></h2>
+                <p id="evento-descricao" class="descricao"></p>
+                <dl class="detalhes">
+                    <dt>Local</dt><dd id="evento-local"></dd>
+                    <dt>Data</dt><dd id="evento-data"></dd>
+                    <dt>Preço</dt><dd id="evento-preco"></dd>
+                </dl>
+            </article>
+
+            <div class="estoque">
+                <p>Estoque disponível: <strong id="estoque-disponivel"></strong></p>
+                <p id="esgotado" class="esgotado" hidden>Esgotado</p>
+                <button type="button" id="botao-atualizar" class="secundario">Atualizar Estoque disponível</button>
+            </div>
+
+            <!-- Seleção de quantidade e Reserva -->
+            <div id="selecao" class="selecao">
+                <!-- Aparece quando a Sessão já tem uma Reserva ativa (voltou do Checkout) -->
+                <div id="reserva-pendente" class="reserva-pendente" hidden>
+                    <p>Você tem uma Reserva ativa de <strong id="pendente-quantidade"></strong> Ingresso(s),
+                        expira em <strong id="pendente-contagem"></strong>.
+                        Reservar de novo cancela a Reserva atual, mesmo que a nova tenha Recusa.</p>
+                    <button type="button" id="botao-voltar-checkout" class="secundario">Voltar ao Checkout</button>
+                </div>
+
+                <form id="form-reserva" novalidate>
+                    <label for="campo-quantidade">Quantidade (1 a <span id="limite-por-reserva"></span>)</label>
+                    <input id="campo-quantidade" name="quantidade" type="number" min="1" step="1" value="1" inputmode="numeric" required>
+                    <p class="total">Total: <strong id="selecao-total"></strong></p>
+                    <button type="submit" id="botao-reservar">Reservar</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Tela 3: Checkout (Reserva ativa) -->
+        <section id="tela-checkout" class="tela" hidden>
+            <h2>Checkout</h2>
+            <dl class="detalhes">
+                <dt>Quantidade</dt><dd id="checkout-quantidade"></dd>
+                <dt>Preço unitário</dt><dd id="checkout-preco"></dd>
+                <dt>Total</dt><dd id="checkout-total"></dd>
+            </dl>
+            <p class="contagem">Sua Reserva expira em <strong id="checkout-contagem" aria-live="polite"></strong></p>
+
+            <div id="acoes-checkout" class="acoes">
+                <!-- Pagamento simulado: só um botão, sem cobrança real -->
+                <button type="button" id="botao-confirmar">Confirmar Pagamento simulado</button>
+
+                <button type="button" id="botao-voltar-selecao" class="secundario">Voltar à seleção</button>
+
+                <button type="button" id="botao-cancelar" class="secundario">Cancelar Reserva</button>
+            </div>
+        </section>
+
+        <!-- Tela 4: confirmação da Venda -->
+        <section id="tela-venda" class="tela" hidden>
+            <h2>Venda confirmada</h2>
+            <p>Pagamento simulado confirmado. Seus Ingressos estão garantidos.</p>
+            <dl class="detalhes">
+                <dt>Quantidade</dt><dd id="venda-quantidade"></dd>
+                <dt>Total</dt><dd id="venda-total"></dd>
+                <dt>Identificador da Venda</dt><dd><code id="venda-id"></code></dd>
+            </dl>
+            <div class="acoes">
+                <button type="button" id="botao-voltar-evento" class="secundario">Voltar ao Evento</button>
+            </div>
+        </section>
+    </main>
 </body>
 </html>

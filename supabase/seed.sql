@@ -1,0 +1,3 @@
+-- Seed só para o ambiente local (aplicado em `supabase db reset`; não vai para o remoto).
+-- O Evento de demonstração NÃO fica aqui: está na migração 20261103000300_evento_demonstracao.sql,
+-- para que `supabase db push` também o crie no projeto remoto.
