@@ -3,9 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistemas Distribuídos - Venda de Ingressos</title>
+    <title>Venda de Ingressos</title>
+    <link rel="stylesheet" href="css/estilo.css">
+    <!-- supabase-js via CDN, versão exata (mesma do package.json) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+    <script type="module" src="js/app.js"></script>
 </head>
 <body>
-    
+    <header class="topo">
+        <h1>Venda de Ingressos</h1>
+        <p id="saudacao" class="saudacao" hidden></p>
+    </header>
+
+    <main>
+        <!-- Mensagens: Recusa (regra de negócio) e Falha (erro técnico) têm estilos distintos. -->
+        <div id="aviso" class="aviso" role="alert" hidden></div>
+
+        <p id="carregando" class="carregando">Carregando…</p>
+
+        <!-- Tela 1: entrada do nome (cria a Sessão) -->
+        <section id="tela-nome" class="tela" hidden>
+            <h2>Quem é você?</h2>
+            <p>Informe só o seu nome para participar da compra. Não é preciso criar conta.</p>
+            <form id="form-nome" novalidate>
+                <label for="campo-nome">Nome</label>
+                <input id="campo-nome" name="nome" type="text" maxlength="80" autocomplete="name" required>
+                <button type="submit" id="botao-entrar">Entrar</button>
+            </form>
+        </section>
+
+        <!-- Tela 2: vitrine do Evento -->
+        <section id="tela-vitrine" class="tela" hidden>
+            <article class="evento">
+                <h2 id="evento-nome"></h2>
+                <p id="evento-descricao" class="descricao"></p>
+                <dl class="detalhes">
+                    <dt>Local</dt><dd id="evento-local"></dd>
+                    <dt>Data</dt><dd id="evento-data"></dd>
+                    <dt>Preço</dt><dd id="evento-preco"></dd>
+                </dl>
+            </article>
+
+            <div class="estoque">
+                <p>Estoque disponível: <strong id="estoque-disponivel"></strong></p>
+                <p id="esgotado" class="esgotado" hidden>Esgotado</p>
+                <button type="button" id="botao-atualizar" class="secundario">Atualizar estoque</button>
+            </div>
+
+            <!-- #6: seleção de quantidade e reserva entram aqui -->
+            <div id="selecao"></div>
+        </section>
+
+        <!-- #6: telas de Checkout e confirmação da Venda entram aqui, no mesmo padrão (section.tela) -->
+    </main>
 </body>
 </html>
