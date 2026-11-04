@@ -80,7 +80,8 @@
             <p class="contagem">Sua Reserva expira em <strong id="checkout-contagem" aria-live="polite"></strong></p>
 
             <div id="acoes-checkout" class="acoes">
-                <!-- #7: botão de confirmar o Pagamento simulado (id="botao-confirmar") -->
+                <!-- Pagamento simulado: só um botão, sem cobrança real -->
+                <button type="button" id="botao-confirmar">Confirmar Pagamento simulado</button>
 
                 <button type="button" id="botao-voltar-selecao" class="secundario">Voltar à seleção</button>
 
@@ -88,9 +89,18 @@
             </div>
         </section>
 
-        <!-- Tela 4: confirmação da Venda (#7 preenche) -->
+        <!-- Tela 4: confirmação da Venda -->
         <section id="tela-venda" class="tela" hidden>
-            <!-- #7: quantidade, total e identificador da Venda -->
+            <h2>Venda confirmada</h2>
+            <p>Pagamento simulado confirmado. Seus Ingressos estão garantidos.</p>
+            <dl class="detalhes">
+                <dt>Quantidade</dt><dd id="venda-quantidade"></dd>
+                <dt>Total</dt><dd id="venda-total"></dd>
+                <dt>Identificador da Venda</dt><dd><code id="venda-id"></code></dd>
+            </dl>
+            <div class="acoes">
+                <button type="button" id="botao-nova-compra" class="secundario">Voltar ao Evento</button>
+            </div>
         </section>
     </main>
 </body>

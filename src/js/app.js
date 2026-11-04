@@ -295,6 +295,39 @@ $('botao-voltar-selecao').addEventListener('click', () => {
 
 // ---- Checkout: confirmar (#7) ----
 
+function exibirVenda(venda) {
+  $('venda-quantidade').textContent = String(venda.quantidade);
+  $('venda-total').textContent = moeda.format(venda.total);
+  $('venda-id').textContent = venda.id;
+  mostrarTela('tela-venda');
+}
+
+// O banco é a autoridade do prazo: mesmo com a contagem ainda positiva, pode recusar reserva_expirada.
+$('botao-confirmar').addEventListener('click', () => {
+  limparAviso();
+  const atual = reservaAtual();
+  if (!atual) return;
+  comBotaoBloqueado($('botao-confirmar'), async () => {
+    const r = await api.confirmarPagamento(sessao.id(), atual.id);
+    if (r.ok) {
+      sairDoCheckout();
+      exibirEstoque({ estoque_disponivel: r.estoque_disponivel });
+      exibirVenda(r.venda);
+      return;
+    }
+    if (r.motivo === 'sessao_invalida') return;
+    // Expirada, já finalizada ou inexistente: a Reserva local não vale mais; volta à seleção.
+    sairDoCheckout();
+    avisarRecusa(r.motivo);
+    await carregarVitrine();
+  });
+});
+
+$('botao-nova-compra').addEventListener('click', () => {
+  limparAviso();
+  comBotaoBloqueado($('botao-nova-compra'), carregarVitrine);
+});
+
 // ---- Checkout: cancelar (#8) ----
 
 // ---- início ----
