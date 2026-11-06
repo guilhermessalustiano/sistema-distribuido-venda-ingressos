@@ -1,115 +1,455 @@
+/*
+ * Paleta: a "noite" (azul-violeta) e a "lâmpada" (âmbar) são complementares no círculo
+ * cromático; o âmbar aparece só nas ações principais, então o olho vai direto até elas.
+ * O papel do Ingresso é um branco levemente frio, puxado para o tom da noite.
+ * Contrastes (WCAG): tinta/papel ~15:1, grafite/papel ~6,4:1, tinta/lâmpada ~9:1,
+ * névoa/noite ~9:1, brasa/papel ~5,4:1.
+ */
 :root {
-    --fundo: #f6f7f9;
-    --cartao: #ffffff;
-    --texto: #1d2330;
-    --suave: #5b6475;
-    --borda: #d9dde4;
-    --primaria: #2f5bd3;
-    --primaria-texto: #ffffff;
-    --recusa-fundo: #fff4e0;
-    --recusa-borda: #e0a030;
-    --falha-fundo: #fde8e8;
-    --falha-borda: #c53030;
-    --esgotado: #c53030;
+    --noite: #161a33;
+    --noite-2: #222746;
+    --nevoa: #c3c7e6;
+    --papel: #f3f4fb;
+    --papel-2: #e4e6f3;
+    --tinta: #1a1d3a;
+    --grafite: #555a7a;
+    --linha: #c9cce0;
+    --lampada: #f2b33d;
+    --lampada-forte: #f6c461;
+    --brasa: #b4471f;
+    --brasa-fundo: #fbe9e1;
+    --falha: #a3203a;
+    --falha-fundo: #f9e3e8;
+
+    --fonte-texto: "Atkinson Hyperlegible", system-ui, sans-serif;
+    --fonte-letreiro: "Big Shoulders Display", "Arial Narrow", sans-serif;
+
+    /* Escala modular 1,25 (terça maior) a partir de 1rem. */
+    --t-1: 0.8rem;
+    --t0: 1rem;
+    --t1: 1.25rem;
+    --t2: 1.563rem;
+    --t3: 1.953rem;
+    --t5: 3.052rem;
+
+    --raio: 14px;
+    --entalhe: 14px;
 }
 
 * { box-sizing: border-box; }
 
 body {
     margin: 0;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    background: var(--fundo);
-    color: var(--texto);
-    line-height: 1.5;
+    font-family: var(--fonte-texto);
+    font-size: var(--t0);
+    line-height: 1.55;
+    background: var(--noite);
+    color: var(--nevoa);
+    -webkit-font-smoothing: antialiased;
 }
 
+h1, h2, h3 { line-height: 1.15; color: inherit; }
+
+a { color: var(--lampada); }
+
+.visualmente-oculto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+:focus-visible {
+    outline: 3px solid var(--lampada);
+    outline-offset: 2px;
+}
+
+/* ---- topo ---- */
+
 .topo {
-    background: var(--cartao);
-    border-bottom: 1px solid var(--borda);
-    padding: 12px 16px;
+    max-width: 34rem;
+    margin: 0 auto;
+    padding: 20px 16px 0;
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
     justify-content: space-between;
-    gap: 8px;
+    gap: 4px 16px;
 }
 
-.topo h1 { font-size: 1.25rem; margin: 0; }
-.saudacao { margin: 0; color: var(--suave); }
+.topo h1, .marca {
+    margin: 0;
+    font-family: var(--fonte-letreiro);
+    font-weight: 600;
+    font-size: var(--t1);
+    letter-spacing: 0.02em;
+    color: var(--nevoa);
+}
+
+.saudacao { margin: 0; color: var(--nevoa); }
 
 main {
-    max-width: 640px;
-    margin: 24px auto;
+    max-width: 34rem;
+    margin: 20px auto 48px;
     padding: 0 16px;
 }
 
-.tela, .aviso {
-    background: var(--cartao);
-    border: 1px solid var(--borda);
+.carregando { color: var(--nevoa); }
+
+/* ---- botões ---- */
+
+button {
+    font: inherit;
+    cursor: pointer;
+    border-radius: 10px;
+    padding: 10px 18px;
+    border: 2px solid var(--tinta);
+    background: transparent;
+    color: var(--tinta);
+    transition: background-color 120ms, border-color 120ms, color 120ms;
+}
+
+button.primario {
+    background: var(--lampada);
+    border-color: var(--lampada);
+    color: var(--tinta);
+    font-weight: 700;
+    min-height: 48px;
+}
+button.primario:hover:not(:disabled) {
+    background: var(--lampada-forte);
+    border-color: var(--lampada-forte);
+}
+
+button.largo { width: 100%; font-size: var(--t1); }
+
+/* Ações secundárias: texto sublinhado, sem disputar atenção com o âmbar. */
+button.texto {
+    border: 0;
+    padding: 6px 2px;
+    min-height: 44px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+}
+button.texto:hover:not(:disabled) { text-decoration-thickness: 2px; }
+button.perigo { color: var(--brasa); }
+
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button[data-pendente="sim"]:disabled { cursor: wait; }
+
+/* ---- campos ---- */
+
+input[type="text"], input[type="number"] {
+    font: inherit;
+    color: var(--tinta);
+    background: #fff;
+    border: 2px solid var(--linha);
+    border-radius: 10px;
+    padding: 10px 12px;
+    min-height: 48px;
+}
+input:focus-visible { border-color: var(--tinta); outline-color: var(--tinta); outline-offset: 0; }
+input::placeholder { color: var(--grafite); }
+
+/* ---- avisos: Recusa (regra de negócio) e Falha (erro técnico) ---- */
+
+.aviso {
+    margin-bottom: 16px;
+    padding: 14px 16px 14px 18px;
+    border-radius: 10px;
+    border-left: 6px solid;
+    color: var(--tinta);
+}
+.aviso.recusa { background: var(--brasa-fundo); border-color: var(--brasa); }
+.aviso.falha { background: var(--falha-fundo); border-color: var(--falha); }
+.aviso strong { display: block; }
+.aviso.recusa strong { color: var(--brasa); }
+.aviso.falha strong { color: var(--falha); }
+
+/* ---- o Ingresso ---- */
+
+.ingresso {
+    background: var(--papel);
+    color: var(--tinta);
+    border-radius: var(--raio);
+    box-shadow: 0 24px 48px -24px rgb(0 0 0 / 0.55);
+}
+
+.ingresso :focus-visible { outline-color: var(--tinta); }
+
+.canhoto { padding: 28px 24px 22px; }
+
+.evento-nome {
+    margin: 0 0 10px;
+    font-family: var(--fonte-letreiro);
+    font-weight: 800;
+    font-size: clamp(2.4rem, 9vw, var(--t5));
+    line-height: 0.95;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+}
+
+.descricao {
+    margin: 0 0 22px;
+    max-width: 52ch;
+    color: var(--grafite);
+}
+
+.ficha {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 14px 24px;
+    margin: 0;
+}
+.ficha dt { font-size: var(--t-1); color: var(--grafite); }
+.ficha dd {
+    margin: 0;
+    font-family: var(--fonte-letreiro);
+    font-weight: 600;
+    font-size: var(--t2);
+    line-height: 1.1;
+}
+.ficha .hora { display: block; }
+
+/* Picote: linha tracejada com dois entalhes da cor do fundo, como num bilhete destacável. */
+.picote {
+    position: relative;
+    height: calc(var(--entalhe) * 2);
+    margin: 0 var(--entalhe);
+    background: linear-gradient(90deg, var(--linha) 50%, transparent 0) center / 12px 2px repeat-x;
+}
+.picote::before, .picote::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: calc(var(--entalhe) * 2);
+    height: calc(var(--entalhe) * 2);
+    border-radius: 50%;
+    background: var(--noite);
+}
+.picote::before { left: calc(var(--entalhe) * -2); }
+.picote::after { right: calc(var(--entalhe) * -2); }
+
+.ingresso.sem-evento .canhoto,
+.ingresso.sem-evento .picote { display: none; }
+
+.ingresso .tela {
+    padding: 18px 24px 26px;
+    background: none;
+    border: 0;
+    margin: 0;
+}
+
+.ingresso h2 {
+    margin: 0 0 4px;
+    font-size: var(--t1);
+}
+
+.apoio { margin: 0 0 16px; color: var(--grafite); }
+.dica { margin: 6px 0 0; font-size: var(--t-1); color: var(--grafite); }
+
+.numeral {
+    font-family: var(--fonte-letreiro);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Tela de nome */
+.linha-form { display: flex; flex-wrap: wrap; gap: 10px; }
+.linha-form input { flex: 1 1 12rem; }
+
+/* Tela de seleção */
+.estoque {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.estoque p { margin: 0; color: var(--grafite); }
+.estoque strong {
+    color: var(--tinta);
+    font-family: var(--fonte-letreiro);
+    font-weight: 800;
+    font-size: var(--t2);
+    font-variant-numeric: tabular-nums;
+}
+
+.esgotado {
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--brasa-fundo);
+}
+.esgotado strong {
+    display: block;
+    font-family: var(--fonte-letreiro);
+    font-size: var(--t2);
+    color: var(--brasa);
+}
+
+.reserva-pendente {
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 2px dashed var(--lampada);
+    background: #fff8e8;
+}
+.reserva-pendente p { margin: 0; }
+
+.escolha {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+.quantidade label { display: block; font-weight: 700; margin-bottom: 6px; }
+
+.seletor {
+    display: inline-flex;
+    align-items: stretch;
+    border: 2px solid var(--linha);
+    border-radius: 12px;
+    background: #fff;
+}
+.seletor:focus-within { border-color: var(--tinta); }
+.seletor input[type="number"] {
+    width: 3.2em;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    text-align: center;
+    font-family: var(--fonte-letreiro);
+    font-weight: 800;
+    font-size: var(--t2);
+    padding: 4px 0;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+.seletor input::-webkit-inner-spin-button,
+.seletor input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.seletor input:focus-visible { outline: 0; }
+button.passo {
+    border: 0;
+    border-radius: 10px;
+    width: 48px;
+    padding: 0;
+    font-size: var(--t2);
+    line-height: 1;
+}
+button.passo:hover:not(:disabled) { background: var(--papel-2); }
+
+.total { margin: 0; text-align: right; }
+.total span { display: block; font-size: var(--t-1); color: var(--grafite); }
+.total strong { font-size: var(--t3); line-height: 1; }
+
+/* Checkout */
+.contagem {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 6px 0 18px;
+    color: var(--grafite);
+}
+.contagem strong {
+    font-size: 3.5rem;
+    line-height: 1;
+    color: var(--tinta);
+    transition: color 300ms;
+}
+.contagem.urgente strong { color: var(--brasa); }
+.contagem span { max-width: 18ch; }
+
+.resumo { margin: 0 0 20px; }
+.resumo > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--linha);
+}
+.resumo dt { color: var(--grafite); }
+.resumo dd {
+    margin: 0;
+    font-family: var(--fonte-letreiro);
+    font-weight: 600;
+    font-size: var(--t1);
+    font-variant-numeric: tabular-nums;
+}
+.resumo .resumo-total { border-bottom: 0; }
+.resumo .resumo-total dd { font-size: var(--t3); line-height: 1; }
+.resumo .resumo-id { flex-direction: column; align-items: flex-start; gap: 2px; border-bottom: 0; }
+.resumo code { font-family: ui-monospace, Consolas, monospace; font-size: var(--t-1); overflow-wrap: anywhere; color: var(--grafite); }
+
+.acoes .dica { text-align: center; }
+.acoes-secundarias {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+/* Venda: o carimbo é o único movimento automático da página. */
+#tela-venda { position: relative; }
+.carimbo {
+    position: absolute;
+    top: 22px;
+    right: 22px;
+    margin: 0;
+    padding: 4px 12px;
+    border: 3px solid var(--brasa);
     border-radius: 8px;
+    color: var(--brasa);
+    font-family: var(--fonte-letreiro);
+    font-weight: 800;
+    font-size: var(--t2);
+    transform: rotate(-8deg);
+    opacity: 0.9;
+}
+#tela-venda:not([hidden]) .carimbo { animation: carimbar 420ms cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
+@keyframes carimbar {
+    from { transform: rotate(-8deg) scale(1.8); opacity: 0; }
+    to { transform: rotate(-8deg) scale(1); opacity: 0.9; }
+}
+#tela-venda h2 { padding-right: 9rem; }
+
+@media (max-width: 420px) {
+    .canhoto { padding: 24px 18px 18px; }
+    .ingresso .tela { padding: 16px 18px 22px; }
+    .contagem strong { font-size: 3rem; }
+    #tela-venda h2 { padding-right: 0; padding-top: 40px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* ---- Painel admin (mesma paleta; cartões de papel sobre a noite) ---- */
+
+.topo a { color: var(--lampada); }
+
+.tela {
+    background: var(--papel);
+    color: var(--tinta);
+    border-radius: var(--raio);
     padding: 20px;
     margin-bottom: 16px;
 }
+.tela h2 { margin-top: 0; }
+.tela button.secundario, .acoes-painel button.secundario { border-color: currentColor; }
+.acoes-painel button.secundario { color: var(--nevoa); }
 
-.carregando { color: var(--suave); }
-
-.aviso { border-left-width: 6px; }
-.aviso.recusa { background: var(--recusa-fundo); border-color: var(--recusa-borda); }
-.aviso.falha { background: var(--falha-fundo); border-color: var(--falha-borda); }
-.aviso strong { display: block; }
-
-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-form label { width: 100%; font-weight: 600; }
-input[type="text"] {
-    flex: 1 1 200px;
-    padding: 8px 10px;
-    border: 1px solid var(--borda);
-    border-radius: 6px;
-    font: inherit;
-}
-
-button {
-    padding: 8px 16px;
-    border-radius: 6px;
-    border: 1px solid var(--primaria);
-    background: var(--primaria);
-    color: var(--primaria-texto);
-    font: inherit;
-    cursor: pointer;
-}
-button.secundario { background: transparent; color: var(--primaria); }
-button:disabled { opacity: 0.6; cursor: wait; }
-
-.evento h2 { margin-top: 0; }
-.descricao { color: var(--suave); }
 .detalhes { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; }
-.detalhes dt { font-weight: 600; }
+.detalhes dt { font-weight: 700; color: var(--grafite); }
 .detalhes dd { margin: 0; }
-
-.estoque { border-top: 1px solid var(--borda); padding-top: 12px; margin-top: 12px; }
-.esgotado { color: var(--esgotado); font-weight: 700; font-size: 1.25rem; }
-
-.selecao { border-top: 1px solid var(--borda); padding-top: 12px; margin-top: 12px; }
-input[type="number"] {
-    width: 6em;
-    padding: 8px 10px;
-    border: 1px solid var(--borda);
-    border-radius: 6px;
-    font: inherit;
-}
-.total { margin: 0; flex: 1 1 auto; }
-.reserva-pendente {
-    background: var(--fundo);
-    border: 1px dashed var(--primaria);
-    border-radius: 6px;
-    padding: 12px;
-    margin-bottom: 12px;
-}
-.reserva-pendente p { margin-top: 0; }
-
-.contagem { font-size: 1.25rem; }
-.contagem strong { font-variant-numeric: tabular-nums; }
-.acoes { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .configuracao {
     display: grid;
@@ -120,9 +460,15 @@ input[type="number"] {
     border: 0;
     padding: 0;
 }
-
+.configuracao label { font-weight: 700; }
 .configuracao input[type="number"] { width: min(100%, 16em); }
-.configuracao button { justify-self: start; margin-top: 8px; }
+.configuracao button {
+    justify-self: start;
+    margin-top: 8px;
+    background: var(--lampada);
+    border-color: var(--lampada);
+    font-weight: 700;
+}
 
 #form-configuracao[hidden] { display: none; }
 
