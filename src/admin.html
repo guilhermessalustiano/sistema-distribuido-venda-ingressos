@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel admin · Venda de Ingressos</title>
+    <link rel="stylesheet" href="css/estilo.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+    <script type="module" src="js/admin.js"></script>
+</head>
+<body>
+    <header class="topo">
+        <h1>Painel admin</h1>
+        <a href="index.html">Página de venda</a>
+    </header>
+
+    <main>
+        <div id="aviso" class="aviso" role="alert" hidden></div>
+        <p id="status" class="carregando" role="status" hidden></p>
+
+        <div class="acoes-painel">
+            <button type="button" id="botao-atualizar" class="secundario">Atualizar painel</button>
+        </div>
+
+        <section id="acompanhamento" class="tela" hidden>
+            <h2>Acompanhamento</h2>
+            <p>Os totais e os tempos restantes correspondem à última atualização.</p>
+            <dl class="detalhes">
+                <dt>Ingressos vendidos</dt>
+                <dd id="vendidos"></dd>
+                <dt>Ingressos reservados</dt>
+                <dd id="reservados"></dd>
+                <dt>Estoque disponível</dt>
+                <dd id="estoque-disponivel"></dd>
+                <dt>Vendas</dt>
+                <dd id="quantidade-vendas"></dd>
+                <dt>Total arrecadado</dt>
+                <dd id="total-arrecadado"></dd>
+            </dl>
+
+            <h3>Reservas ativas</h3>
+            <p id="sem-reservas">Nenhuma Reserva ativa.</p>
+            <ul id="reservas-ativas" class="registros-painel" hidden></ul>
+
+            <h3>Vendas</h3>
+            <p id="sem-vendas">Nenhuma Venda registrada.</p>
+            <ul id="vendas" class="registros-painel" hidden></ul>
+        </section>
+
+        <section class="tela">
+            <h2>Configuração do Evento</h2>
+            <p>Painel público da demonstração. Qualquer pessoa com o endereço pode alterar a configuração.</p>
+            <form id="form-configuracao" novalidate hidden>
+                <fieldset id="campos-configuracao" class="configuracao">
+                    <label for="capacidade">Capacidade</label>
+                    <input id="capacidade" name="capacidade" type="number" min="0" max="2147483647" step="1" required>
+
+                    <label for="preco">Preço (R$)</label>
+                    <input id="preco" name="preco" type="number" min="0" max="99999999.99" step="0.01" required>
+
+                    <label for="tempo_reserva_segundos">Tempo de reserva (segundos)</label>
+                    <input id="tempo_reserva_segundos" name="tempo_reserva_segundos" type="number" min="1" max="2147483647" step="1" required>
+
+                    <label for="limite_por_reserva">Limite por reserva</label>
+                    <input id="limite_por_reserva" name="limite_por_reserva" type="number" min="1" max="2147483647" step="1" required>
+
+                    <button type="submit">Salvar configuração</button>
+                </fieldset>
+            </form>
+        </section>
+        <section class="tela">
+            <h2>Reinício da demonstração</h2>
+            <p>Qualquer pessoa com o endereço pode apagar todas as Vendas, Reservas e Sessões. A configuração do Evento é preservada.</p>
+            <button type="button" id="botao-reiniciar" class="secundario">Reiniciar demonstração</button>
+        </section>
+    </main>
+</body>
+</html>

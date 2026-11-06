@@ -63,4 +63,12 @@ export const api = {
   reservar: (sessaoId, quantidade) => chamar('reservar', { p_sessao_id: sessaoId, p_quantidade: quantidade }),
   confirmarPagamento: (sessaoId, reservaId) => chamar('confirmar_pagamento', { p_sessao_id: sessaoId, p_reserva_id: reservaId }),
   cancelarReserva: (sessaoId, reservaId) => chamar('cancelar_reserva', { p_sessao_id: sessaoId, p_reserva_id: reservaId }),
+  adminConsultar: () => chamar('admin_consultar'),
+  adminReiniciar: () => chamar('admin_reiniciar'),
+  adminAtualizarEvento: (evento) => chamar('admin_atualizar_evento', {
+    p_capacidade: evento.capacidade,
+    p_preco: evento.preco,
+    p_tempo_reserva_segundos: evento.tempo_reserva_segundos,
+    p_limite_por_reserva: evento.limite_por_reserva,
+  }),
 };

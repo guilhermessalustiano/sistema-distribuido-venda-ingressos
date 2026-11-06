@@ -110,3 +110,29 @@ input[type="number"] {
 .contagem { font-size: 1.25rem; }
 .contagem strong { font-variant-numeric: tabular-nums; }
 .acoes { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.configuracao {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    margin: 0 0 16px;
+    border: 0;
+    padding: 0;
+}
+
+.configuracao input[type="number"] { width: min(100%, 16em); }
+.configuracao button { justify-self: start; margin-top: 8px; }
+
+#form-configuracao[hidden] { display: none; }
+
+.acoes-painel { margin-bottom: 16px; }
+
+#acompanhamento .detalhes dd { overflow-wrap: anywhere; }
+
+.registros-painel {
+    margin: 0;
+    padding-inline-start: 24px;
+    overflow-wrap: anywhere;
+}
+.registros-painel li + li { margin-top: 8px; }
