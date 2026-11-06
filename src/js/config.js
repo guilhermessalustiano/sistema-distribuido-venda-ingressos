@@ -4,8 +4,9 @@
 
 // Projeto Supabase remoto (preencha com Project Settings > API do projeto da equipe).
 const REMOTO = {
-  url: 'https://SEU-PROJETO.supabase.co',
-  anonKey: 'COLE-AQUI-A-CHAVE-ANON-DO-PROJETO-REMOTO',
+  url: 'https://xybbbumhbhuwhjthyqna.supabase.co',
+  // anonKey: 'COLE-AQUI-A-CHAVE-ANON-DO-PROJETO-REMOTO',
+  anonKey: 'sb_publishable_jnibuHZHps9AlfO-Ob9ABQ_BBjIKP-N',
 };
 
 // Supabase local (`npx supabase start`). A chave anon local é a padrão do Supabase CLI;
