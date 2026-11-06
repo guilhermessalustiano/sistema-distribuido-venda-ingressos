@@ -28,6 +28,8 @@ const TELAS = [
 
 function mostrarTela(id) {
   $('carregando').hidden = true;
+  $('ingresso').hidden = false;
+  $('ingresso').classList.toggle('sem-evento', !eventoAtual);
   for (const tela of TELAS) $(tela).hidden = tela !== id;
 }
 
@@ -85,11 +87,20 @@ async function comBotaoBloqueado(botao, acao) {
 // ---- formatação ----
 
 const moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-const dataHora = new Intl.DateTimeFormat('pt-BR', {
-  dateStyle: 'full',
-  timeStyle: 'short',
+const data = new Intl.DateTimeFormat('pt-BR', {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
   timeZone: 'America/Sao_Paulo',
 });
+const hora = new Intl.DateTimeFormat('pt-BR', {
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'America/Sao_Paulo',
+});
+
+// A contagem do Checkout muda de cor quando falta pouco para a Reserva expirar.
+const URGENTE_MS = 30_000;
 
 // ---- estado da página ----
 
@@ -138,7 +149,8 @@ function exibirVitrine(r) {
   $('evento-nome').textContent = evento.nome;
   $('evento-descricao').textContent = evento.descricao;
   $('evento-local').textContent = evento.local;
-  $('evento-data').textContent = dataHora.format(new Date(evento.data));
+  $('evento-data').textContent = data.format(new Date(evento.data)).replaceAll('.', '');
+  $('evento-hora').textContent = hora.format(new Date(evento.data));
   $('evento-preco').textContent = moeda.format(evento.preco);
   $('limite-por-reserva').textContent = String(evento.limite_por_reserva);
   $('campo-quantidade').max = String(evento.limite_por_reserva);
@@ -172,11 +184,25 @@ function quantidadeDigitada() {
 
 function atualizarTotalSelecao() {
   const q = quantidadeDigitada();
-  const valida = Number.isInteger(q) && q >= 1 && eventoAtual && q <= eventoAtual.limite_por_reserva;
+  const limite = eventoAtual?.limite_por_reserva ?? 1;
+  const valida = Number.isInteger(q) && q >= 1 && eventoAtual && q <= limite;
   $('selecao-total').textContent = valida ? moeda.format(q * eventoAtual.preco) : '—';
+  $('botao-menos').disabled = !(q > 1);
+  $('botao-mais').disabled = Number.isFinite(q) && q >= limite;
+}
+
+// Os botões − e + mantêm a quantidade entre 1 e o Limite por reserva; digitar continua possível.
+function ajustarQuantidade(delta) {
+  const atual = quantidadeDigitada();
+  const base = Number.isFinite(atual) ? Math.round(atual) : 0;
+  const limite = eventoAtual?.limite_por_reserva ?? 1;
+  $('campo-quantidade').value = String(Math.min(limite, Math.max(1, base + delta)));
+  atualizarTotalSelecao();
 }
 
 $('campo-quantidade').addEventListener('input', atualizarTotalSelecao);
+$('botao-menos').addEventListener('click', () => ajustarQuantidade(-1));
+$('botao-mais').addEventListener('click', () => ajustarQuantidade(1));
 
 // Mostra a vitrine/seleção; se houver Reserva ativa, avisa que reservar de novo a substitui.
 function irParaSelecao() {
@@ -247,6 +273,7 @@ function exibirRestante(ms) {
   const texto = formatarRestante(ms);
   $('checkout-contagem').textContent = texto;
   $('pendente-contagem').textContent = texto;
+  $('contagem').classList.toggle('urgente', ms <= URGENTE_MS);
 }
 
 // Entra no Checkout com a Reserva devolvida pelo banco (por reservar ou consultar_evento).
@@ -341,9 +368,15 @@ $('botao-cancelar').addEventListener('click', () => {
 
 // ---- início ----
 
+// Sem Sessão, o Evento já aparece no Ingresso enquanto a pessoa informa o nome.
 async function iniciar() {
-  if (!sessao.id()) return irParaNome();
   try {
+    if (!sessao.id()) {
+      // Se o Evento não carregar, a tela de nome aparece mesmo assim (só sem o canhoto).
+      const r = await api.consultarEvento(null).catch((erro) => console.error(erro));
+      if (r?.ok) exibirVitrine(r);
+      return irParaNome();
+    }
     await carregarVitrine();
   } catch (erro) {
     $('carregando').hidden = true;
