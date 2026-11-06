@@ -1,0 +1,38 @@
+# Roda a suíte de integração contra um Supabase local (mesma imagem e extensões do remoto,
+# incluindo pg_safeupdate), aplicando todas as migrações do zero.
+name: Testes
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: testes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # Só banco, PostgREST, Kong e Auth: o resto não é usado pelos testes.
+      - name: Subir Supabase local
+        run: >
+          npx supabase start
+          -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,postgres-meta,realtime,storage-api,supavisor
+
+      - run: npm test
+
+      - name: Desligar Supabase local
+        if: always()
+        run: npx supabase stop --no-backup
