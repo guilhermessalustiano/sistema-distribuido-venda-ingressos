@@ -12,6 +12,9 @@ const FUNCOES_PUBLICAS = [
   'reservar',
   'cancelar_reserva',
   'confirmar_pagamento',
+  'admin_consultar',
+  'admin_atualizar_evento',
+  'admin_reiniciar',
 ];
 
 const anon = clienteAnon();
