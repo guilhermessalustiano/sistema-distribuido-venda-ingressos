@@ -101,6 +101,43 @@ function containerDoBanco() {
   return `supabase_db_${projeto}`;
 }
 
+// Privilégio de teste: executa SQL com o papel postgres (psql dentro do container do banco local).
+function executarSql(sql) {
+  return new Promise((ok, nok) => {
+    const psql = spawn('docker', ['exec', '-i', containerDoBanco(), 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1'], {
+      stdio: ['pipe', 'ignore', 'pipe'],
+    });
+    let erro = '';
+    psql.stderr.on('data', (d) => (erro += d));
+    psql.on('error', nok);
+    psql.on('exit', (codigo) => (codigo === 0 ? ok() : nok(new Error(`psql saiu com ${codigo}: ${erro}`))));
+    psql.stdin.end(sql);
+  });
+}
+
+// Privilégio de teste: faz todo INSERT em `tabela` ('venda' ou 'reserva') lançar um erro no meio da
+// transação das funções, simulando uma Falha técnica. Desfaça com removerFalhasInduzidas no afterEach.
+export function induzirFalhaAoInserir(tabela) {
+  return executarSql(`
+    create or replace function interno.falha_induzida() returns trigger
+    language plpgsql set search_path = '' as $$
+    begin
+      raise exception 'falha induzida';
+    end;
+    $$;
+    create trigger falha_induzida before insert on public.${tabela}
+      for each row execute function interno.falha_induzida();
+  `);
+}
+
+export function removerFalhasInduzidas() {
+  return executarSql(`
+    drop trigger if exists falha_induzida on public.venda;
+    drop trigger if exists falha_induzida on public.reserva;
+    drop function if exists interno.falha_induzida();
+  `);
+}
+
 export function segurarTravaDoEvento(ms) {
   return new Promise((travada, falhou) => {
     const psql = spawn('docker', ['exec', '-i', containerDoBanco(), 'psql', '-U', 'postgres', '-qAt', '-v', 'ON_ERROR_STOP=1'], {
