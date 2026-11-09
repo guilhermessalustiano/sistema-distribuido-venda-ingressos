@@ -107,6 +107,7 @@ npx supabase stop --no-backup
 - Chamam as funções exatamente como o navegador: `supabase-js` com a chave anon. A chave `service_role` é usada só em `tests/apoio/banco.js` para preparar o cenário (limpar dados, configurar o Evento) e para conferências de integridade.
 - URL e chaves vêm de `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` ou, na falta delas, de `npx supabase status -o env`.
 - Para um teste novo, crie `tests/<assunto>.test.js` e chame `prepararBanco({ ...configuração do Evento })` no `beforeEach`.
+- `tests/atomicidade.test.js` induz uma Falha no meio da transação com um gatilho temporário, criado por `induzirFalhaAoInserir` e removido no `afterEach`, sem código de teste nas funções.
 - O GitHub Actions (`.github/workflows/testes.yml`) roda a suíte em todo PR e em todo push na `main`, contra um Supabase local criado do zero com as migrações. Teste com o Supabase local, não só com PostgreSQL e PostgREST "puros": o Supabase carrega extensões como `safeupdate`, que recusa `DELETE`/`UPDATE` sem `WHERE` nas chamadas da API.
 
 ## Publicação (manual, feita pela equipe)
